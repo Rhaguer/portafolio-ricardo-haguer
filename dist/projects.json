@@ -1,0 +1,273 @@
+[
+  {
+    "repo": "Balanza_Practica",
+    "title": "Balanza de residuos",
+    "category": "IoT y datos",
+    "status": "Proyecto de título",
+    "tech": [
+      "Python",
+      "Django",
+      "SQLite",
+      "Serial / USB"
+    ],
+    "summary": "Del pesaje al registro: gestión de residuos, retiros y reportes desde una aplicación web.",
+    "problem": "Registrar residuos y retiros con trazabilidad, roles diferenciados y conexión con una balanza.",
+    "solution": "Aplicación Django con panel operativo, permisos, integración serial y exportación de reportes XLSX.",
+    "evidence": "El repositorio documenta instalación portable, respaldos, roles y preparación del despliegue.",
+    "limit": "La conexión física depende del equipo y sus controladores. El despliegue requiere configuración del entorno.",
+    "kind": "scale",
+    "featured": true,
+    "image": "assets/balanza_practica.svg",
+    "url": "https://github.com/Rhaguer/Balanza_Practica",
+    "source": "https://github.com/Rhaguer/Balanza_Practica/blob/main/README.md"
+  },
+  {
+    "repo": "AGENTES",
+    "title": "HAGUER Agent Platform",
+    "category": "Automatización",
+    "status": "Plataforma local",
+    "tech": [
+      "Python",
+      "FastAPI",
+      "OAuth",
+      "SQLite"
+    ],
+    "summary": "Orquestación de agentes, integraciones y tareas con permisos, aprobaciones y auditoría.",
+    "problem": "Coordinar tareas de productividad sin perder control sobre las acciones y los permisos.",
+    "solution": "API versionada y panel local con agentes, automatizaciones, RBAC y registro de ejecuciones.",
+    "evidence": "Incluye documentación de arquitectura, scripts de instalación, pruebas y un informe de validación.",
+    "limit": "Las integraciones reales requieren configurar OAuth y los permisos de cada servicio.",
+    "kind": "agents",
+    "featured": true,
+    "image": "assets/agentes.svg",
+    "url": "https://github.com/Rhaguer/AGENTES",
+    "source": "https://github.com/Rhaguer/AGENTES/blob/main/README.md"
+  },
+  {
+    "repo": "EPILEPCIA-SMATRWACHT",
+    "title": "SeizureWatch · investigación",
+    "category": "IoT y datos",
+    "status": "Investigación experimental",
+    "tech": [
+      "TypeScript",
+      "Python",
+      "React Native",
+      "scikit-learn"
+    ],
+    "summary": "Procesamiento de señales de wearables y evaluación temporal de una línea base de pronóstico.",
+    "problem": "Estudiar señales de movimiento y pulso con un protocolo reproducible y métricas verificables.",
+    "solution": "Motor TypeScript, ingesta E4 y modelos experimentales con separación cronológica y evaluación portable.",
+    "evidence": "14 pruebas Python y 21.402 decisiones coincidentes entre Python y TypeScript en el experimento publicado.",
+    "limit": "El modelo no mejoró la referencia horaria. Sin validación clínica, captura de reloj verificada ni APK funcional comprobada.",
+    "kind": "watch",
+    "featured": true,
+    "image": "assets/epilepcia-smatrwacht.svg",
+    "url": "https://github.com/Rhaguer/EPILEPCIA-SMATRWACHT",
+    "source": "https://github.com/Rhaguer/EPILEPCIA-SMATRWACHT/blob/main/README.md"
+  },
+  {
+    "repo": "JARVISHAGUER",
+    "title": "JARVIS · voz y automatización",
+    "category": "Automatización",
+    "status": "Prototipo documentado",
+    "tech": [
+      "Python",
+      "Raspberry Pi",
+      "Vosk",
+      "Wake-on-LAN"
+    ],
+    "summary": "Reconocimiento de voz local para encender un equipo y preparar el espacio de trabajo.",
+    "problem": "Reducir pasos repetitivos al iniciar una sesión de trabajo sin automatizar credenciales.",
+    "solution": "Raspberry Pi con Vosk, Magic Packet por Ethernet, servicio systemd y scripts para Windows.",
+    "evidence": "El código incluye pruebas unitarias, diagnóstico, instalación y documentación del flujo completo.",
+    "limit": "Las pruebas de micrófono, BIOS y encendido físico siguen siendo manuales.",
+    "kind": "voice",
+    "image": "assets/jarvishaguer.svg",
+    "url": "https://github.com/Rhaguer/JARVISHAGUER",
+    "source": "https://github.com/Rhaguer/JARVISHAGUER/blob/main/README.md"
+  },
+  {
+    "repo": "axoryn",
+    "title": "Axoryn Auto",
+    "category": "Desarrollo web",
+    "status": "Demo de e-commerce",
+    "tech": [
+      "HTML",
+      "CSS",
+      "JavaScript",
+      "localStorage"
+    ],
+    "summary": "Experiencia de compra de repuestos con catálogo, favoritos, carrito y checkout de demostración.",
+    "problem": "Organizar un catálogo automotriz y construir una experiencia de compra clara.",
+    "solution": "Interfaz estática con fichas de producto, persistencia local y simulación de pago.",
+    "evidence": "Incluye documentación técnica, validación y créditos de las imágenes del catálogo.",
+    "limit": "Precios, stock y pagos son demostrativos. No procesa cobros ni datos bancarios reales.",
+    "kind": "auto",
+    "image": "assets/axoryn.svg",
+    "url": "https://github.com/Rhaguer/axoryn",
+    "source": "https://github.com/Rhaguer/axoryn/blob/main/README.md"
+  },
+  {
+    "repo": "rutanativa",
+    "title": "Ruta Nativa",
+    "category": "Desarrollo web",
+    "status": "Proyecto académico en equipo",
+    "tech": [
+      "HTML",
+      "CSS",
+      "JavaScript",
+      "localStorage"
+    ],
+    "summary": "Tienda conceptual de ciclismo urbano con catálogo, carrito y administración de demostración.",
+    "problem": "Representar un flujo completo de compra y su gestión en un proyecto académico.",
+    "solution": "Páginas de catálogo, detalle, resumen, checkout y panel administrativo.",
+    "evidence": "El repositorio incluye una página de criterios y trazabilidad de la evaluación.",
+    "limit": "La empresa, los productos y el pago son de demostración. No se efectúan cobros.",
+    "kind": "bike",
+    "image": "assets/rutanativa.svg",
+    "url": "https://github.com/Rhaguer/rutanativa",
+    "source": "https://github.com/Rhaguer/rutanativa/blob/main/README.md"
+  },
+  {
+    "repo": "limchile-whatsapp-intuitivo",
+    "title": "Bienestar por WhatsApp",
+    "category": "Automatización",
+    "status": "Prototipo de integración",
+    "tech": [
+      "JavaScript",
+      "Netlify Functions",
+      "WhatsApp API",
+      "Groq"
+    ],
+    "summary": "Consulta de beneficios por texto o audio con respuestas limitadas a un catálogo estructurado.",
+    "problem": "Facilitar el acceso a información de bienestar sin generar beneficios inexistentes.",
+    "solution": "Webhook con validación HMAC, transcripción de audio y búsqueda determinística o semántica.",
+    "evidence": "Incluye pruebas locales del motor de búsqueda y contratos de integración documentados.",
+    "limit": "El catálogo incluido es demostrativo. Requiere credenciales de Meta y servicios de información reales.",
+    "kind": "chat",
+    "image": "assets/limchile-whatsapp-intuitivo.svg",
+    "url": "https://github.com/Rhaguer/limchile-whatsapp-intuitivo",
+    "source": "https://github.com/Rhaguer/limchile-whatsapp-intuitivo/blob/main/README.md"
+  },
+  {
+    "repo": "INACAP-Asistente-Local",
+    "title": "Asistente INACAP",
+    "category": "Automatización",
+    "status": "Demo local",
+    "tech": [
+      "JavaScript",
+      "Extensión de navegador",
+      "Python"
+    ],
+    "summary": "Asistente de navegación que trabaja con el contenido visible de la página.",
+    "problem": "Ayudar a encontrar información y opciones presentes en una interfaz institucional.",
+    "solution": "Scripts y extensión con panel de asistencia y un servicio local complementario.",
+    "evidence": "El README describe la demo local y el repositorio incorpora extensión y documentación de seguridad.",
+    "limit": "La integración institucional y su autorización deben comprobarse. No se presenta como producto oficial de INACAP.",
+    "kind": "assistant",
+    "image": "assets/inacap-asistente-local.svg",
+    "url": "https://github.com/Rhaguer/INACAP-Asistente-Local",
+    "source": "https://github.com/Rhaguer/INACAP-Asistente-Local/blob/main/README.md"
+  },
+  {
+    "repo": "seizurewatch-android-prototype-fixed",
+    "title": "SeizureWatch · Android",
+    "category": "Aplicaciones móviles",
+    "status": "Prototipo nativo",
+    "tech": [
+      "Kotlin",
+      "Jetpack Compose",
+      "CameraX",
+      "Android"
+    ],
+    "summary": "Exploración de medición de pulso con cámara e interfaz de monitorización en Android.",
+    "problem": "Explorar la captura y presentación de señales desde una aplicación nativa.",
+    "solution": "Pantalla CameraX, estimador experimental de pulso, modelos y panel de riesgo separado.",
+    "evidence": "Incluye configuración Gradle y una guía de compilación.",
+    "limit": "La pantalla de cámara y el panel de monitorización no están integrados. Sin validación clínica ni compilación verificada.",
+    "kind": "phone",
+    "image": "assets/seizurewatch-android-prototype-fixed.svg",
+    "url": "https://github.com/Rhaguer/seizurewatch-android-prototype-fixed",
+    "source": "https://github.com/Rhaguer/seizurewatch-android-prototype-fixed/blob/main/README.md"
+  },
+  {
+    "repo": "RegistroEstudiantes_IoT4",
+    "title": "Registro de estudiantes",
+    "category": "Aplicaciones móviles",
+    "status": "Proyecto académico",
+    "tech": [
+      "C#",
+      ".NET MAUI",
+      "XAML"
+    ],
+    "summary": "Interfaz móvil con vistas de creación, edición y listado de estudiantes.",
+    "problem": "Organizar la gestión de registros de estudiantes en una interfaz móvil.",
+    "solution": "Solución .NET MAUI que separa modelos e interfaz y define vistas de operaciones CRUD.",
+    "evidence": "Se verificaron las vistas CrearEstudiante, EditarEstudiante y ListarEstudiante en el código público.",
+    "limit": "La conectividad y ejecución en dispositivos no se han comprobado en esta revisión.",
+    "kind": "students",
+    "image": "assets/registroestudiantes_iot4.svg",
+    "url": "https://github.com/Rhaguer/RegistroEstudiantes_IoT4",
+    "source": "https://github.com/Rhaguer/RegistroEstudiantes_IoT4/blob/main/README.md"
+  },
+  {
+    "repo": "RegistroEmpleados01",
+    "title": "Registro · .NET MAUI",
+    "category": "Aplicaciones móviles",
+    "status": "Proyecto académico",
+    "tech": [
+      "C#",
+      ".NET MAUI",
+      "XAML"
+    ],
+    "summary": "Solución de práctica con separación entre aplicación móvil y modelos de datos.",
+    "problem": "Practicar la organización de una aplicación multiplataforma y sus operaciones de registro.",
+    "solution": "Proyectos de interfaz y modelos con vistas de creación, edición y listado.",
+    "evidence": "Aunque el repositorio se llama RegistroEmpleados01, sus modelos y vistas publicados corresponden a estudiantes.",
+    "limit": "No se atribuyen funciones de gestión de empleados que no estén demostradas por el código.",
+    "kind": "records",
+    "image": "assets/registroempleados01.svg",
+    "url": "https://github.com/Rhaguer/RegistroEmpleados01",
+    "source": "https://github.com/Rhaguer/RegistroEmpleados01/blob/master/README.md"
+  },
+  {
+    "repo": "camara",
+    "title": "DOMUZ · seguridad IoT",
+    "category": "Desarrollo web",
+    "status": "Sitio demostrativo",
+    "tech": [
+      "HTML",
+      "CSS",
+      "JavaScript"
+    ],
+    "summary": "Presentación web de servicios de cámaras, alarmas y seguridad para hogares y negocios.",
+    "problem": "Comunicar una oferta de servicios de seguridad mediante una página comercial.",
+    "solution": "Secciones de servicios, planes y cotización con una propuesta visual de hogar conectado.",
+    "evidence": "Contenido y estructura comprobados en el index.html público.",
+    "limit": "Es una presentación web; no demuestra un sistema de videovigilancia operativo.",
+    "kind": "camera",
+    "image": "assets/camara.svg",
+    "url": "https://github.com/Rhaguer/camara",
+    "source": "https://github.com/Rhaguer/camara/blob/main/README.md"
+  },
+  {
+    "repo": "CINEMATICA",
+    "title": "Cimática · sonido visible",
+    "category": "Desarrollo web",
+    "status": "Recurso educativo",
+    "tech": [
+      "JavaScript",
+      "HTML",
+      "Web Audio"
+    ],
+    "summary": "Página educativa sobre sonido y vibraciones con generador de ondas y registro de experimentos.",
+    "problem": "Explicar cómo las frecuencias y las vibraciones se relacionan con patrones visibles.",
+    "solution": "Contenido didáctico, selección de formas de onda y visualización de registros.",
+    "evidence": "Se revisó el contenido del sitio publicado en el repositorio.",
+    "limit": "La página acredita a Lorenzo Haguer Raggi. Se incluye como repositorio público, sin atribuir autoría exclusiva a Ricardo.",
+    "kind": "waves",
+    "image": "assets/cinematica.svg",
+    "url": "https://github.com/Rhaguer/CINEMATICA",
+    "source": "https://github.com/Rhaguer/CINEMATICA/blob/main/README.md"
+  }
+]
