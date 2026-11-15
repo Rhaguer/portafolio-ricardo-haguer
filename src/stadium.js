@@ -12,12 +12,12 @@ export async function createRenderer(getCanvas, compact) {
       await modern.init();
       renderer = modern;
     } catch {
-      void modern?.dispose().catch(() => {});
+      if (modern) await Promise.resolve().then(() => modern.dispose()).catch(() => {});
     }
   }
   renderer ??= new THREE.WebGLRenderer({ ...options, canvas: getCanvas() });
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.16;
+  renderer.toneMappingExposure = 1.04;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -29,24 +29,34 @@ export async function createRenderer(getCanvas, compact) {
 
 export function addAtmosphere(scene) {
   const canvas = document.createElement('canvas');
-  canvas.width = 16;
+  canvas.width = 1024;
   canvas.height = 256;
   const ctx = canvas.getContext('2d');
   const gradient = ctx.createLinearGradient(0, 0, 0, 256);
-  gradient.addColorStop(0, '#354d64');
-  gradient.addColorStop(.42, '#7493a0');
-  gradient.addColorStop(.59, '#bac9c9');
-  gradient.addColorStop(.79, '#e3d1af');
-  gradient.addColorStop(1, '#a6acab');
+  gradient.addColorStop(0, '#14283e');
+  gradient.addColorStop(.40, '#2c4f77');
+  gradient.addColorStop(.49, '#7c7396');
+  gradient.addColorStop(.55, '#e3a07c');
+  gradient.addColorStop(.63, '#706a79');
+  gradient.addColorStop(1, '#37465b');
   ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, 16, 256);
+  ctx.fillRect(0, 0, 1024, 256);
+  for (let i=0; i<110; i++) {
+    const x=(i*179.37)%1024, y=83+(i*37.13)%53, w=35+(i*11.39)%211;
+    const light = ctx.createLinearGradient(x, y, x+w, y);
+    light.addColorStop(0, 'transparent');
+    light.addColorStop(.48, i%3 ? 'rgba(255,178,129,.115)' : 'rgba(240,213,193,.18)');
+    light.addColorStop(1, 'transparent');
+    ctx.fillStyle=light;
+    ctx.fillRect(x,y,w,1+(i%5)*.55);
+  }
   const sky = new THREE.CanvasTexture(canvas);
   sky.colorSpace = THREE.SRGBColorSpace;
   const mesh = new THREE.Mesh(new THREE.SphereGeometry(224, 32, 16),
     new THREE.MeshBasicMaterial({ map: sky, side: THREE.BackSide, fog: false, toneMapped: false }));
   mesh.name='Cielo';
   scene.add(mesh);
-  scene.fog = new THREE.FogExp2('#adbfc4', .005);
+  scene.fog = new THREE.FogExp2('#767f96', .0032);
 }
 
 export function turfMaterial(compact) {
@@ -69,8 +79,8 @@ export function turfMaterial(compact) {
   texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
   texture.repeat.set(13, 25);
   texture.colorSpace = THREE.SRGBColorSpace;
-  texture.anisotropy = compact ? 2 : 8;
-  return new THREE.MeshStandardMaterial({ color: '#537c55', map: texture, roughness: .92 });
+  texture.anisotropy = compact ? 4 : 12;
+  return new THREE.MeshStandardMaterial({ color: '#6b9458', map: texture, bumpMap:texture, bumpScale:compact?.012:.022, roughness: .88 });
 }
 
 function ovalBand(outer, inner, height, color) {
@@ -181,6 +191,16 @@ export function addGrandstands(scene, compact) {
     model.add(mesh);
     return mesh;
   }
+  const ribbons = [];
+  for (const row of [2, 6, rows-1]) {
+    for (const item of tiers.filter(item => item.row === row)) {
+      const point = item.point.clone();
+      point.y = row*.82+.36;
+      ribbons.push({point,angle:item.angle,width:item.width});
+    }
+  }
+  details(ribbons,new THREE.BoxGeometry(1,.14,1.83),'#c1c4b6');
+  model.add(ovalBand([57, 89], [49, 81], -.09, '#71817c'));
   const seatsMesh = details(seats, new RoundedBoxGeometry(.49, .43, .18, 1, .045), '#ffffff');
   details(railings, new THREE.BoxGeometry(.82, .055, .055), '#c0bbac');
   for (const sign of [-1, 1]) {
@@ -202,12 +222,12 @@ export function addGrandstands(scene, compact) {
     bodies.count = heads.count = Math.floor(occupancy.length * count);
     seatsMesh.count = Math.floor(seats.length * (mode === 'light' ? .68 : 1));
   }};
-  model.add(ovalBand([57, 89], [49, 81], -.09, '#71817c'));
 }
 
 export function addTunnel(scene) {
   const tunnel = new THREE.Group();
-  tunnel.position.set(-35, 0, -1);
+  tunnel.name='Túnel al camarín';
+  tunnel.position.set(-40, 0, -1);
   tunnel.rotation.y = Math.PI / 2;
   scene.add(tunnel);
   const concrete = new THREE.MeshStandardMaterial({ color: '#5f6c63', roughness: .88 });
@@ -220,20 +240,34 @@ export function addTunnel(scene) {
     return mesh;
   }
   for (const side of [-1, 1]) {
-    part(.44, 3.3, 8.6, side * 3.68, 1.65, -1.8, concrete);
-    part(1.12, .55, 1.4, side * 4.1, .25, 2.9, cladding);
+    part(.44, 3.3, 15.3, side * 3.68, 1.65, 0, concrete);
+    part(1.12, .55, 1.4, side * 4.1, .25, 7.1, cladding);
   }
-  part(7.66, .46, 8.6, 0, 3.35, -1.8, concrete);
-  part(7.45, .14, 8.6, 0, .015, -1.8, cladding);
-  part(7.4, 3.3, .20, 0, 1.65, -6, cladding);
+  part(7.66, .46, 15.3, 0, 3.35, 0, concrete);
+  part(7.45, .14, 15.3, 0, -.055, 0, cladding);
   const curve = new THREE.CatmullRomCurve3([
     [-3.7,.12,2.53],[-3.7,2.47,2.53],[-3.21,3.16,2.53],[-2.2,3.54,2.53],
     [0,3.62,2.53],[2.2,3.54,2.53],[3.21,3.16,2.53],[3.7,2.47,2.53],[3.7,.12,2.53],
-  ].map(point => new THREE.Vector3(...point)));
+  ].map(([x,y]) => new THREE.Vector3(x,y,7.52)));
   tunnel.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 40, .23, 7),
     new THREE.MeshStandardMaterial({ color:'#b9984b',roughness:.52,metalness:.22 })));
   const lamp = new THREE.MeshBasicMaterial({ color: '#ffe9a8' });
-  for (const z of [-4.65, -2.35, -.05, 1.68]) part(3.6,.09,.12,0,3.05,z,lamp);
+  const strip = new THREE.MeshStandardMaterial({color:'#b67c1c',roughness:.53,metalness:.23});
+  for (const side of [-1,1]) {
+    part(.045,.23,15.05,side*3.449,1.19,0,strip);
+    for (const z of [-6,-3,0,3,6]) {
+      part(.075,.18,.78,side*3.415,.51,z,lamp);
+      part(.16,3.05,.105,side*3.39,1.61,z,cladding);
+    }
+  }
+  for (const z of [-5.6,-1.9,1.9,5.6]) part(3.6,.07,.11,0,3.05,z,lamp);
+  for (const z of [-4.8,3.9]) {
+    const lighting = new THREE.PointLight('#ffd89a',43,10,2);
+    lighting.position.set(0,2.94,z);
+    tunnel.add(lighting);
+  }
+  return tunnel;
+
 }
 
 export function contactShadow(scene) {
@@ -259,6 +293,7 @@ export function addLockerRoom(scene, center) {
   const room = new THREE.Group();
   room.name = 'Camarín';
   room.position.copy(center);
+  room.rotation.y=Math.PI/2;
   scene.add(room);
   const wood = new THREE.MeshStandardMaterial({color:'#815e41',roughness:.82});
   const steel = new THREE.MeshStandardMaterial({color:'#263c3b',roughness:.56,metalness:.23});
@@ -273,26 +308,32 @@ export function addLockerRoom(scene, center) {
     room.add(mesh);
     return mesh;
   }
-  part(15,.22,14,0,-.095,0,wood);
-  part(8,.025,6,0,.022,0,felt,.007);
-  part(15,4.5,.35,0,2.25,-6.8,wall);
-  part(.35,3.9,13.7,-7.3,1.95,0,wall);
-  part(14.5,.23,.32,0,4.56,-6.55,steel);
-  for(const x of [-5.65,-3.38,-1.13,1.13,3.38,5.65]){
-    part(2.08,2.75,.86,x,1.49,-5.86,steel);
-    part(1.74,2.45,.076,x,1.50,-5.37,wood);
-    part(.085,.34,.08,x+.62,1.47,-5.28,steel);
-    part(1.68,.065,.08,x,2.57,-5.27,light,.02);
+  const panels = new THREE.MeshStandardMaterial({color:'#263f34',roughness:.73});
+  part(15,.22,14,0,-.105,0,wood);
+  part(8,.025,6,0,.018,0,felt,.007);
+  part(15,4.5,.35,0,2.25,-6.8,panels);
+  part(15,.28,14,0,4.55,0,steel);
+  part(14.5,.23,.32,0,4.30,-6.55,steel);
+  for (const side of [-1,1]) {
+    part(.35,4.5,13.7,side*7.3,2.25,0,wall);
+    part(3.87,4.5,.24,side*5.51,2.25,6.83,panels);
+    for (const z of [-5,-3,-1,1,3]) {
+      part(.88,2.87,1.91,side*6.55,1.50,z,steel);
+      part(.13,2.76,1.74,side*6.04,1.51,z,wood);
+      part(.72,.07,1.71,side*6.0,2.76,z,light,.02);
+      part(.68,.18,1.72,side*6.01,.45,z,wood);
+    }
+    part(.95,.21,4.45,side*4.61,.58,-1.1,wood);
+    for (const z of [-2.66,.47])part(.62,.5,.18,side*4.61,.29,z,steel);
+    part(.08,.10,10.8,side*4.68,4.37,-.14,light,.02);
   }
-  for (const x of [-4.6,4.6]) {
-    part(3.86,.21,1.24,x,.58,-2.8,wood);
-    for(const leg of [-1.55,1.55])part(.13,.51,1.04,x+leg,.28,-2.8,steel);
-  }
-  part(2.65,.15,1.02,0,1.15,-.2,wood);
-  part(.28,1.15,.54,0,.57,-.2,steel);
-  const roomLight=new THREE.PointLight('#ffdc9f',110,17,2);
-  roomLight.position.set(0,5,-3);
+  part(5.8,2.43,.22,0,2.48,-6.58,steel);
+  part(5.7,.055,.18,0,1.23,-6.44,light,.018);
+  const roomLight=new THREE.PointLight('#ffdc9f',145,18,2);
+  roomLight.position.set(0,4.22,-2.2);
   room.add(roomLight);
-  room.visible=false;
+  const entranceLight=new THREE.PointLight('#fff0cc',62,13,2);
+  entranceLight.position.set(0,4.25,4.2);
+  room.add(entranceLight);
   return room;
 }
