@@ -14,7 +14,7 @@ const architecture = {
   Balanza_Practica: ['Balanza USB', 'Aplicación Django', 'Registro en SQLite', 'Reporte Excel'],
   AGENTES: ['Solicitud del usuario', 'API FastAPI', 'Orquestación de agentes', 'Registro de actividad'],
   'EPILEPCIA-SMATRWACHT': ['Señales del wearable', 'Preparación de variables', 'Evaluación temporal', 'Comparación con referencia'],
-  'limchile-whatsapp-intuitivo': ['Mensaje de texto o audio', 'WhatsApp API', 'Consulta al catálogo', 'Respuesta de beneficios'],
+  'limchile-whatsapp-intuitivo': ['Mensaje de texto o audio', 'WhatsApp API', 'Recuperación del catálogo (RAG)', 'Respuesta de beneficios'],
 };
 
 const roles = {

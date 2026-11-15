@@ -37,6 +37,8 @@ const stops = [
   },
 ];
 
+const sequence=['limchile-whatsapp-intuitivo','Balanza_Practica','EPILEPCIA-SMATRWACHT'];
+stops.sort((a,b)=>sequence.indexOf(a.repo)-sequence.indexOf(b.repo));
 const panel = document.getElementById('panel-content');
 export function createTour({show, openProject, openCatalog}) {
   let stopIndex = 0;

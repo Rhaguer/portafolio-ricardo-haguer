@@ -1,4 +1,5 @@
 import { createTour } from './tour.js';
+import { enrichCatalog, featuredProjects } from './featured.js';
 import { caseMarkup, createCaseTabs, shareProject } from './case-study.js';
 
 const $=id=>document.getElementById(id);
@@ -6,7 +7,7 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const normalize=v=>v.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 let projects=[],catalogError=false,game=null,returnFocus=null;
 const repositoryLink = p => `<a href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">Ver repositorio en GitHub ↗</a><p class="repo-note">Repositorio privado. GitHub requiere acceso autorizado.</p>`;
-const catalog=fetch('./projects.json').then(r=>{if(!r.ok)throw Error('Catálogo no disponible');return r.json()}).then(data=>{projects=data;return data}).catch(()=>{catalogError=true;return []});
+const catalog=fetch('./projects.json').then(r=>{if(!r.ok)throw Error('Catálogo no disponible');return r.json()}).then(data=>{projects=enrichCatalog(data);return projects}).catch(()=>{catalogError=true;return []});
 const tags = p => `<div class="tags" aria-label="Tecnologías">${p.tech.map(t => `<button type="button" class="tech-pill" data-tech="${esc(t)}">${esc(t)}</button>`).join('')}</div>`;
 function show(html) {
   const panel=$('panel');
@@ -91,10 +92,10 @@ function listing(category = '', query = '') {
   update();
 }
 catalog.then(() => {
-  $('home-projects').innerHTML = projects.filter(p => p.featured).slice(0, 3).map(p =>
+  $('home-projects').innerHTML = featuredProjects(projects).map(({p,proof}) =>
     `<button type="button" class="home-card" data-home-project="${esc(p.repo)}">
       <img src="${esc(p.image)}" width="640" height="380" alt="">
-      <span><small>${esc(categoryLabels[p.category])}</small><strong>${esc(p.title)}</strong></span>
+      <span><small>${esc(p.status)}</small><strong>${esc(p.title)}</strong><span class="home-proof">${esc(proof)}</span></span>
       <span aria-hidden="true">↗</span>
     </button>`).join('');
 });
@@ -163,21 +164,31 @@ $('panel-content').addEventListener('click',event=>{
 });
 const fieldDestinations=new Map();
 function initFieldProjects() {
-  const featured=projects.filter(item=>item.featured);
-  for(const item of projects)if(featured.length<4&&!featured.includes(item))featured.push(item);
-  $('field-cards').innerHTML=featured.slice(0,4).map((item,index)=>`<button type="button" data-field-project="${esc(item.repo)}">
-    <img src="${esc(item.image)}" width="64" height="44" alt=""><span><small>${index+1} · ${esc(categoryLabels[item.category])}</small><strong>${esc(item.title)}</strong></span>
-  </button>`).join('');
-  $('field-markers').innerHTML=featured.slice(0,4).map((item,index)=>`<button type="button" data-field-project="${esc(item.repo)}" hidden><span aria-hidden="true">${index+1}</span>${esc(item.title)}</button>`).join('');
+  const featured=featuredProjects(projects);
+  $('field-plan').innerHTML=featured.map(({p,name,x,z},index)=>`<button type="button" data-field-guide="${esc(p.repo)}" aria-label="Guiar a ${esc(name)}" style="--mx:${Math.round((x+35)/70*100)}%;--my:${Math.round((z+58)/116*100)}%">${index+1}</button>`).join('');
+  $('field-cards').innerHTML=featured.map(({p,name},index)=>`<article class="field-card">
+    <button type="button" data-field-project="${esc(p.repo)}">
+      <img src="${esc(p.image)}" width="64" height="44" alt=""><span><small>${index+1} · ${esc(name)}</small><strong>${esc(p.title)}</strong></span>
+    </button>
+    <button type="button" class="field-guide" data-field-guide="${esc(p.repo)}" aria-label="Ir a ${esc(name)}">Guiar</button>
+  </article>`).join('');
+  $('field-markers').innerHTML=featured.map(({p},index)=>`<button type="button" data-field-project="${esc(p.repo)}" hidden><span aria-hidden="true">${index+1}</span>${esc(p.title)}</button>`).join('');
   for(const button of $('field-markers').querySelectorAll('[data-field-project]'))fieldDestinations.set(button.dataset.fieldProject,button);
 }
 $('play-hud').addEventListener('click',event=>{
-  const button=event.target.closest('[data-field-project]');
+  const button=event.target.closest('[data-field-project],[data-field-guide]');
   if(!button)return;
   $('field-directory').open=false;
-  game.openDestination(button.dataset.fieldProject);
+  if(button.dataset.fieldGuide)game.guideToProject(button.dataset.fieldGuide);
+  else game.openDestination(button.dataset.fieldProject);
+  if(!$('panel').open)$('world').focus({preventScroll:true});
 });
-let statusClock, scoreClock;
+let statusClock, scoreClock, currentResult=null, activePlay=false, canPassNow=false;
+function updatePassButtons(){
+  $('pass-action').hidden=!canPassNow||Boolean(currentResult);
+  $('choose-receiver').hidden=$('pass-action').hidden;
+  $('interact').hidden=Boolean(currentResult);
+}
 function status(message){
   $('game-status').textContent=message;
   clearTimeout(statusClock);
@@ -206,8 +217,8 @@ $('enter').onclick=async()=>{
         for(const {repo,x,y,visible} of placements){
           const button=fieldDestinations.get(repo);
           if(!button)continue;
-          button.hidden=!visible;
-          if(visible)button.style.transform=`translate3d(${Math.round(x)}px,${Math.round(y)}px,0) translate(-50%,-100%)`;
+          button.hidden=!visible||$('field-directory').open;
+          if(!button.hidden)button.style.transform=`translate3d(${Math.round(x)}px,${Math.round(y)}px,0) translate(-50%,-100%)`;
         }
       },
       onQuality:level=>{
@@ -215,13 +226,25 @@ $('enter').onclick=async()=>{
         $('graphics-state').textContent='Calidad automática · '+labels[level];
       },
       onPlay:({active,points,number,receiver,extra,conversion})=>{
+        activePlay=active;
         $('match-score').hidden=!active;
         $('points-total').textContent=points+' pts';
         $('controlled-player').textContent='Jugador #'+number;
         $('pass-action').textContent='Pase al #'+receiver;
         $('try-actions').hidden=!active||!extra;
-        $('kick-action').hidden=!active||conversion;
+        $('kick-action').hidden=!active||conversion||Boolean(currentResult&&!currentResult.kind);
         $('kick-action').textContent=extra?'Patear punto extra':'Patear · K';
+      },
+      onDeadPlay:result=>{
+        currentResult=result;
+        $('play-result').hidden=!result;
+        $('play-result-label').textContent=result?.label??'';
+        $('next-play').textContent=result?.kind?'Seguir jugando':'Siguiente jugada';
+        $('zone-projects').hidden=!result?.kind;
+        if(result&&!result.kind)$('kick-action').hidden=true;
+        else if(activePlay)$('kick-action').hidden=false;
+        if(result&&document.activeElement?.closest('#play-hud'))$('next-play').focus({preventScroll:true});
+        updatePassButtons();
       },
       onKickAim:value=>{
         $('kick-meter').hidden=value===null;
@@ -240,8 +263,9 @@ $('enter').onclick=async()=>{
         $('zone-label').textContent=label;
         $('hint').textContent=hint;
         $('interact').textContent=action;
-        $('touch-action').textContent=action;
-        $('pass-action').hidden=!canPass||action.startsWith('Pasar al #');
+        if(action.startsWith('Pasar al #'))$('interact').textContent='Abrir proyectos';
+        canPassNow=canPass;
+        updatePassButtons();
       },
       onTouchdown:message=>{
         $('announcement').textContent=message;
@@ -256,6 +280,11 @@ $('enter').onclick=async()=>{
       $('play-mode').textContent=active?'Volver a recorrido libre':'Activar jugada rápida';
     });
     $('camera-center').onclick=()=>afterMenu(()=>game.centerCamera());
+    $('camera-view').onclick=()=>afterMenu(()=>{
+      const wide=game.toggleCamera();
+      $('camera-view').textContent=wide?'Detrás del jugador':'Encuadre amplio';
+      $('camera-view').setAttribute('aria-pressed',wide);
+    });
     $('map').onclick=()=>afterMenu(()=>{
       const active=game.toggleMap();
       $('map').setAttribute('aria-pressed',active);
@@ -266,14 +295,13 @@ $('enter').onclick=async()=>{
     $('game-menu').hidden=false;
     if($('panel').open)game.pause(true);
     else $('world').focus({preventScroll:true});
-    $('interact').onclick=$('touch-action').onclick=()=>{
-      if($('interact').textContent.startsWith('Pasar al #'))game.pass();
-      else game.action(true);
-    };
+    $('interact').onclick=()=>game.action(true);
     $('pass-action').onclick=()=>game.pass();
+    $('choose-receiver').onclick=()=>{game.cycleReceiver();$('world').focus({preventScroll:true});};
     $('kick-action').onclick=()=>game.kick();
     $('two-points').onclick=()=>{game.tryForTwo();$('world').focus({preventScroll:true});};
-    $('skip-try').onclick=()=>{game.skipTry();$('world').focus({preventScroll:true});};
+    $('next-play').onclick=()=>{game.nextPlay();$('world').focus({preventScroll:true});};
+    $('zone-projects').onclick=()=>game.useProjects();
     $('snow').onclick=()=>{
       const enabled=game.toggleSnow();
       $('snow').setAttribute('aria-pressed',enabled);
