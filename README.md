@@ -1,6 +1,6 @@
 # Ricardo Haguer · Portafolio 3D
 
-Portafolio estático en español con un estadio de fútbol americano inspirado en Lambeau Field, construido con Three.js, cannon-es y Vite. La vista clásica ofrece los mismos 13 proyectos, perfil, metodología, contacto e impresión.
+Portafolio estático en español con un estadio de fútbol americano inspirado en Lambeau Field, construido con Three.js y Vite, con WebGPU cuando está disponible y WebGL 2 como respaldo. La vista clásica ofrece los mismos 13 proyectos, perfil, metodología, contacto e impresión.
 
 ## Desarrollo
 
@@ -19,9 +19,10 @@ GitHub Actions compila en `build/` y publica ese directorio en GitHub Pages desd
 
 Las dos vistas usan `dist/projects.json`, el catálogo editorial preexistente. Conserva las categorías, el buscador, las fichas, sus URLs y el enlace de respaldo a GitHub. Las fichas se pueden leer públicamente. Sus repositorios requieren acceso autorizado. `python build_assets.py` regenera el JSON y las ilustraciones desde los datos editoriales.
 
-- WASD o flechas: mover. Shift: sprint. Espacio: pase o interacción. Enter: abrir zona. Esc: cerrar panel.
-- En móvil, usar el joystick y PASE / ABRIR. Las zonas también se pueden consultar desde el HUD.
-- Nieve y sonido se controlan desde el HUD. El sonido empieza apagado. El movimiento reducido desactiva la nieve por defecto y acorta la celebración.
+- Proyectos abre el catálogo desde la portada o la cancha. Cada ficha admite un enlace compartible con el fragmento `#proyecto/<repositorio>`.
+- WASD, flechas o joystick para moverse. Arrastrar para girar la cámara. Enter abre un destino. Esc cierra los paneles.
+- En Recorrido libre se pueden abrir proyectos y cruzar a pie el túnel al camarín. Contacto lleva a la entrada del túnel desde la cancha. En la vista clásica abre el contacto directamente.
+- Activa Jugada rápida en el menú para lanzar con Espacio y esquivar a los defensores. El sonido y la nieve empiezan apagados. La calidad gráfica se ajusta automáticamente.
 
 ## Avatar externo opcional
 
