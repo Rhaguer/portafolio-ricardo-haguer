@@ -27,6 +27,7 @@ export class PlayerAvatar{
    this.root.add(this.model);
    this.phase = 0;
    this.throwTime = 0;
+   this.kickTime = 0;
    this.celebrateTime = 0;
    this.motion = 0;
 
@@ -160,6 +161,7 @@ export class PlayerAvatar{
    this.motion = THREE.MathUtils.damp(this.motion, speed ? 1 : 0, 12, dt);
    this.phase += dt * THREE.MathUtils.lerp(2,sprint ? 15 : 11,this.motion);
    this.throwTime = Math.max(0, this.throwTime - dt);
+   this.kickTime = Math.max(0, this.kickTime - dt);
    this.celebrateTime = Math.max(0, this.celebrateTime - dt);
    const stride = Math.sin(this.phase) * .68 * this.motion;
    this.model.rotation.x = (sprint ? .19 : .115) * this.motion;
@@ -185,6 +187,11 @@ export class PlayerAvatar{
      this.arms[1].rotation.x = -2.47 * Math.sin(windup * Math.PI);
      this.elbows[1].rotation.x = -.98 + Math.sin(windup * Math.PI) * .67;
    }
+   if (this.kickTime) {
+     const swing=Math.sin((1-this.kickTime/.53)*Math.PI);
+     this.legs[1].rotation.x=-swing*1.22;
+     this.knees[1].rotation.x=swing*.34;
+   }
    if (this.mixer) {
      const key = this.celebrateTime ? 'celebration' : this.throwTime ? 'throw'
        : speed ? (sprint ? 'sprint' : 'run') : 'idle';
@@ -197,6 +204,7 @@ export class PlayerAvatar{
      this.mixer.update(dt);
    }
  }
+ kick() { this.kickTime=.53; }
  throw() { this.throwTime = .66; }
  releaseBall(position) {
    if (this.external) return this.root.getWorldPosition(position).add(new THREE.Vector3(.4, 1.65, .22));

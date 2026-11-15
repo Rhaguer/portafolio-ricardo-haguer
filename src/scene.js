@@ -3,11 +3,12 @@ import {PlayerAvatar} from './avatar.js';
 import {createDefense} from './defense.js';
 import {createReceiver} from './receiver.js';
 import {createCameraCollision} from './follow-camera.js';
+import {endZone, fieldHalfWidth, goalLine, isGoodKick, pointsByPlay, posts} from './football.js';
 import { addAtmosphere, addGrandstands, addLockerRoom, addTunnel, contactShadow, createRenderer, turfMaterial } from './stadium.js';
 const GREEN='#203731',GOLD='#FFB612';
 const tunnelZ=-1, tunnelMouth=-32.25, tunnelEnd=-47.62, lockerX=-54.45;
 const insideTunnel = pos => pos.x<tunnelMouth && Math.abs(pos.z-tunnelZ)<3.4;
-export async function createGame({container,projects,onOpen,onProject,onZone,onTouchdown,onFailure,onStatus=()=>{},onRoom=()=>{},onQuality=()=>{},onDestinations=()=>{}}){
+export async function createGame({container,projects,onOpen,onProject,onZone,onTouchdown,onFailure,onStatus=()=>{},onRoom=()=>{},onQuality=()=>{},onDestinations=()=>{},onPlay=()=>{},onKickAim=()=>{}}){
  const scene = new THREE.Scene();
  const compact = matchMedia('(pointer: coarse)').matches;
  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -88,7 +89,9 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
    shadow.position.set(0,.073,z);
    shadow.scale.set(1.66,.71,1);
  }
- const player=new PlayerAvatar();
+ let player=new PlayerAvatar();
+ player.number='12';
+ player.root.name='Jugador 12';
  player.root.position.set(1,0,19);
  player.root.rotation.y=Math.PI;
  scene.add(player.root);
@@ -103,11 +106,22 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
    label.rotation.y=side>0?Math.PI:0;
    zone.features=[label];
  }
- for(const z of [-59,59]){
-   cylinder(.18,4,GOLD,0,2,z);
-   const bar=cylinder(.15,11,GOLD,0,4,z);
-   bar.rotation.z=Math.PI/2;
-   for(const x of [-5.5,5.5])cylinder(.13,5,GOLD,x,6.5,z);
+ const postPaint=new THREE.MeshStandardMaterial({color:'#ffca30',emissive:'#e39200',emissiveIntensity:.7,roughness:.48});
+ for(const end of [-1,1]){
+   const z=end*posts.z;
+   const frame=new THREE.Group();
+   frame.name=end<0?'Poste norte':'Poste sur';
+   scene.add(frame);
+   const pad=cylinder(.5,1.65,'#203731',0,.825,z,frame);
+   pad.name='Protección del poste';
+   cylinder(.28,posts.crossbar,'#dca625',0,posts.crossbar/2,z,frame).material=postPaint;
+   const crossbar=cylinder(posts.radius,posts.halfWidth*2,'#ffca30',0,posts.crossbar,z,frame);
+   crossbar.material=postPaint;
+   crossbar.rotation.z=Math.PI/2;
+   for(const x of [-posts.halfWidth,posts.halfWidth]){
+     const pole=cylinder(posts.radius,8.6,'#ffca30',x,posts.crossbar+4.3,z,frame);
+     pole.material=postPaint;
+   }
  }
  const boardFrame=new THREE.Mesh(new THREE.BoxGeometry(34.1,11.38,.9),material('#111f1e'));
  boardFrame.position.set(0,13,-69.1);
@@ -121,6 +135,7 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  box(26,.54,1.7,'#43554e',0,8.5,-70,scoreboardSupport);
  let scoreboardTexture;const boardCanvas=document.createElement('canvas');boardCanvas.width=1536;boardCanvas.height=640;const boardCtx=boardCanvas.getContext('2d');scoreboardTexture=new THREE.CanvasTexture(boardCanvas);scoreboardTexture.colorSpace=THREE.SRGBColorSpace;
  box(33,11,1,GREEN,0,13,-69);const board=new THREE.Mesh(new THREE.PlaneGeometry(31,9.6),new THREE.MeshBasicMaterial({map:scoreboardTexture}));board.position.set(0,13,-68.4);scene.add(board);for(const x of [-13,13])cylinder(.4,10,GREEN,x,5,-69);
+ let points=0, scoringMode=false;
  function score(label,flash=false){
    const ctx=boardCtx;
    const background=ctx.createLinearGradient(0,0,1536,640);
@@ -141,7 +156,10 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
    ctx.fillText(label.toUpperCase(),768,492,1300);
    ctx.fillStyle=flash?GREEN:'#c3d8c9';
    ctx.font='600 29px Arial';
-   ctx.fillText(projects.length+' PROYECTOS · '+new Set(projects.map(p=>p.category)).size+' ÁREAS',768,559);
+   if(scoringMode) {
+     ctx.font='800 53px Arial';
+     ctx.fillText('MARCADOR    '+String(points).padStart(2,'0')+' PTS',768,575);
+   } else ctx.fillText(projects.length+' PROYECTOS · '+new Set(projects.map(p=>p.category)).size+' ÁREAS',768,559);
    scoreboardTexture.needsUpdate=true;
  }
  score('Recorrido libre');
@@ -166,7 +184,9 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  let cameraYaw=.065,cameraPitch=.39,smoothedYaw=cameraYaw,smoothedPitch=cameraPitch;
  let snapView=true;
  let playMode=false, inLocker=false, inTunnel=false, playerStun=0, defenderWarning=false;
- let replay=null, ambience=null, assistedWalk=false, returnBallIn=0;
+ let replay=null, ambience=null, assistedWalk=false;
+ let pendingTry=0, conversionEnd=0, kickAim=null, caughtInEnd=0;
+ const previousPosition=player.root.position.clone();
  const replayView=new THREE.Vector3(0,12,-41), replayLook=new THREE.Vector3(0,12.7,-69);
  const defense=createDefense(scene,()=>{
    playerStun=.8;
@@ -175,17 +195,32 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
      scene.remove(flight.ball);
      player.recoverBall();
      player.throwTime=0;
+     player.kickTime=0;
      flight=null;
    }
-   onStatus('Tackle. Vuelve a moverte para seguir la jugada.');
+   if(conversionEnd){
+     conversionEnd=0;
+     publishPlay();
+     onStatus('Conversión detenida · 0 puntos.');
+   } else onStatus('Tackle. Vuelve a moverte para seguir la jugada.');
  });
+ function publishPlay(){
+   onPlay({active:playMode&&!inTunnel&&!inLocker,points,number:player.number,receiver:teammate.number,
+     extra:Boolean(pendingTry),conversion:Boolean(conversionEnd)});
+ }
+ function cancelKick(){
+   if(!kickAim)return;
+   kickAim=null;
+   onKickAim(null);
+   publishPlay();
+ }
  function stopMovement() {
    assistedWalk=false;
    clearInput();
    motion.set(0,0);
    playerStun=0;
-   if(returnBallIn>0){returnBallIn=0;player.recoverBall();}
-   if(flight){scene.remove(flight.ball);flight=null;player.recoverBall();player.throwTime=0;}
+   cancelKick();
+   if(flight){scene.remove(flight.ball);flight=null;player.recoverBall();player.throwTime=0;player.kickTime=0;}
  }
  function cueProject(project) {
    if(reducedMotion||inTunnel||inLocker){onProject(project);return;}
@@ -312,20 +347,91 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
    updateAmbience();
  }
  const key=new Set(),stick=new THREE.Vector2();const clearInput=()=>{key.clear();resetStick()};window.addEventListener('blur',clearInput);document.addEventListener('visibilitychange',()=>{hidden=document.hidden;if(hidden)clearInput();updateAmbience()});
- window.addEventListener('keydown',e=>{if(paused||e.altKey||e.ctrlKey||e.metaKey||e.target.closest?.('input,textarea,select,[contenteditable]')||(['Enter','Space'].includes(e.code)&&e.target.closest?.('button,a')))return;if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter'].includes(e.code))e.preventDefault();key.add(e.code);if(!e.repeat&&(e.code==='Space'||e.code==='Enter'))action(e.code==='Enter')});window.addEventListener('keyup',e=>key.delete(e.code));
+ window.addEventListener('keydown',e=>{if(paused||e.altKey||e.ctrlKey||e.metaKey||e.target.closest?.('input,textarea,select,[contenteditable]')||(['Enter','Space'].includes(e.code)&&e.target.closest?.('button,a')))return;if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter','KeyK'].includes(e.code))e.preventDefault();key.add(e.code);if(!e.repeat&&e.code==='KeyK')kick();if(!e.repeat&&(e.code==='Space'||e.code==='Enter'))action(e.code==='Enter')});window.addEventListener('keyup',e=>key.delete(e.code));
  const joystick=document.getElementById('joystick'),knob=joystick.querySelector('i');let pointer=null;joystick.addEventListener('pointerdown',e=>{pointer=e.pointerId;joystick.setPointerCapture(pointer);updateStick(e)});joystick.addEventListener('pointermove',e=>{if(e.pointerId===pointer)updateStick(e)});function updateStick(e){const r=joystick.getBoundingClientRect();stick.set((e.clientX-r.left-r.width/2)/(r.width*.42),(e.clientY-r.top-r.height/2)/(r.height*.42));if(stick.length()>1)stick.normalize();knob.style.transform=`translate(${stick.x*r.width*.30}px,${stick.y*r.height*.30}px)`}function resetStick(){pointer=null;stick.set(0,0);knob.style.transform=''}joystick.addEventListener('pointerup',resetStick);joystick.addEventListener('pointercancel',resetStick);joystick.addEventListener('lostpointercapture',resetStick);
  function sound(){if(muted||!audioContext)return;audio??=new audioContext();audio.resume().catch(()=>{});[392,523.25,659.25,783.99].forEach((hz,i)=>{const o=audio.createOscillator(),g=audio.createGain();o.type='triangle';o.frequency.value=hz;g.gain.setValueAtTime(0,audio.currentTime+i*.12);g.gain.linearRampToValueAtTime(.1,audio.currentTime+i*.12+.015);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+i*.12+.38);o.connect(g);g.connect(audio.destination);o.start(audio.currentTime+i*.12);o.stop(audio.currentTime+i*.12+.4)})}
- function touchdown(zone){if(celebration)return;celebration=zone;motion.set(0,0);zoneLock=zone;zoom=reducedMotion?0:1.8;player.celebrate();onTouchdown();score('TOUCHDOWN · '+zone.label,true);sound();confettiTime=2;confettiItems.forEach((p,i)=>{p.x=player.root.position.x;p.y=1;p.z=player.root.position.z;confettiVel[i].set((Math.random()-.5)*10,5+Math.random()*9,(Math.random()-.5)*10)});setTimeout(()=>{celebration=null;score(zone.label);if(!paused)onOpen(zone.kind)},reducedMotion?250:950)}
+ function addScore(type, label){
+   const value=pointsByPlay[type];
+   points+=value;
+   publishPlay();
+   score(label+' · +'+value,true);
+   sound();
+   onTouchdown(label+' +'+value);
+ }
+ function touchdown(end){
+   const isConversion=conversionEnd===end;
+   conversionEnd=0;
+   pendingTry=isConversion?0:end;
+   const zone=zones.find(z=>z.portal&&Math.sign(z.z)===end&&Math.sign(z.x)===(player.root.position.x<0?-1:1));
+   celebration={remaining:reducedMotion?.25:.94,kind:isConversion?null:zone.kind};
+   motion.set(0,0);
+   zoom=reducedMotion?0:1.8;
+   player.celebrate();
+   addScore(isConversion?'conversion':'touchdown',isConversion?'CONVERSIÓN':'TOUCHDOWN');
+   if(!reducedMotion){
+     confettiTime=2;
+     confettiItems.forEach((p,i)=>{p.x=player.root.position.x;p.y=1;p.z=player.root.position.z;confettiVel[i].set((Math.random()-.5)*10,5+Math.random()*9,(Math.random()-.5)*10)});
+   }
+ }
+ function tryForTwo(){
+   if(!playMode||!pendingTry||paused||flight||celebration||inTunnel||inLocker)return;
+   stopMovement();
+   conversionEnd=pendingTry;
+   pendingTry=0;
+   player.root.position.set(0,0,conversionEnd*(goalLine-1.92));
+   previousPosition.copy(player.root.position);
+   player.root.rotation.y=conversionEnd<0?Math.PI:0;
+   cameraYaw=conversionEnd<0?0:Math.PI;
+   teammate.activate(true,player.root.position,conversionEnd);
+   publishPlay();
+   snapView=true;
+   onStatus('Conversión de 2 puntos · cruza la línea con el balón.');
+ }
+ function kick(){
+   if(!playMode||paused||replay||flight||playerStun||celebration||inTunnel||inLocker)return;
+   if(conversionEnd){onStatus('Completa la conversión de 2 puntos cruzando la línea.');return;}
+   const pos=player.root.position;
+   if(!kickAim){
+     const end=pendingTry||(pos.z>0?1:-1);
+     if(!pendingTry&&(Math.abs(pos.x)>fieldHalfWidth||Math.abs(pos.z)<17||Math.abs(pos.z)>=goalLine)){
+       onStatus('Para patear, acércate al poste sin cruzar la línea de gol.');
+       return;
+     }
+     motion.set(0,0);
+     kickAim={end,phase:0,extra:Boolean(pendingTry)};
+     if(pendingTry){
+       pos.set(0,0,end*(goalLine-14.4));
+       teammate.activate(true,pos);
+     }
+     player.root.rotation.y=Math.atan2(-pos.x,end*posts.z-pos.z);
+     cameraYaw=player.root.rotation.y+Math.PI;
+     cameraPitch=.38;
+     snapView=Boolean(pendingTry);
+     onKickAim(0);
+     return;
+   }
+   const {end,phase,extra}=kickAim;
+   const distance=Math.abs(end*posts.z-pos.z);
+   const miss=Math.sin(phase)*(3.7+distance*.033);
+   const from=new THREE.Vector3(pos.x,.28,pos.z);
+   const arc=2.3+distance*.07;
+   const goalHeight=4.15+Math.max(0,34-distance)*.065-Math.abs(miss)*.17;
+   const goalFraction=.88;
+   const to=new THREE.Vector3(from.x+(miss-from.x)/goalFraction,
+     from.y+(goalHeight-from.y-4*goalFraction*(1-goalFraction)*arc)/goalFraction,
+     from.z+(end*posts.z-from.z)/goalFraction);
+   pendingTry=0;
+   cancelKick();
+   publishPlay();
+   player.kick();
+   flight={type:'kick',ball:makeBall(),from,to,time:0,releaseAt:.18,duration:distance/38+.40,
+     arc,goalFraction,goalX:miss,goalHeight,extra,released:false};
+ }
  const ballGeometry = new THREE.SphereGeometry(1, 24, 15);
  const lacesGeometry = new THREE.CapsuleGeometry(.009,.046,2,5);
  const axis = new THREE.Vector3(0,0,1);
  const tangent = new THREE.Vector3();
- function launch() {
-   if(flight||celebration||returnBallIn>0)return;
-   const passer=player.root.position;
-   const span=passer.distanceTo(teammate.position);
-   if(span>27){onStatus('Acércate al receptor #87 para pasar.');return;}
-   player.root.rotation.y=Math.atan2(teammate.position.x-passer.x,teammate.position.z-passer.z);
+ function makeBall(){
    const ball=new THREE.Group();
    const leather=new THREE.Mesh(ballGeometry,material('#77472e'));
    leather.scale.set(.152,.152,.262);
@@ -339,8 +445,18 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
    }
    ball.visible=false;
    scene.add(ball);
+   return ball;
+ }
+ function launch() {
+   if(flight||celebration||kickAim)return;
+   const passer=player.root.position;
+   const span=passer.distanceTo(teammate.position);
+   if(span>27){onStatus('Acércate a tu compañero para pasar.');return;}
+   player.root.rotation.y=Math.atan2(teammate.position.x-passer.x,teammate.position.z-passer.z);
    player.throw();
-   flight={ball,from:new THREE.Vector3(),to:teammate.aim(passer).clone(),time:0,duration:THREE.MathUtils.clamp(span/20,.62,1.08),released:false};
+   const duration=THREE.MathUtils.clamp(span/20,.62,1.08);
+   flight={type:'pass',ball:makeBall(),from:new THREE.Vector3(),to:teammate.aim(passer).clone(),
+     time:0,releaseAt:.22,duration,arc:Math.min(3.8,duration*3.3),released:false};
  }
 
  function receiverNear(pos) {
@@ -359,8 +475,7 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
    if(inTunnel){assistedWalk=!assistedWalk;return;}
    if(!enter&&playMode&&(!current||current.portal)){if(teammateActive)launch();return;}
    if(current){
-     if(current.portal && playMode)touchdown(current);
-     else if(current.kind==='tunnel'){
+     if(current.kind==='tunnel'){
        cameraYaw=Math.PI/2;
        assistedWalk=true;
      } else {zoneLock=current;onOpen(current.kind);}
@@ -368,7 +483,7 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
    }
    const target=receiverNear(player.root.position);
    if(target && (enter||!playMode))cueProject(target.p);
-   else if(!playMode)onOpen('all');
+   else onOpen('all');
  }
  const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
  const clickTargets = new Map();
@@ -473,13 +588,24 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  elapsed+=dt;
  const pos=player.root.position;
  playerStun=Math.max(0,playerStun-dt);
- if(returnBallIn>0){
-   returnBallIn=Math.max(0,returnBallIn-dt);
-   if(returnBallIn===0)player.recoverBall();
+ if(celebration){
+   celebration.remaining-=dt;
+   if(celebration.remaining<=0){
+     const {kind}=celebration;
+     celebration=null;
+     if(kind){
+       onOpen(kind);
+       if(paused)return;
+     }
+   }
+ }
+ if(kickAim){
+   kickAim.phase+=dt*3.1;
+   onKickAim(Math.sin(kickAim.phase));
  }
  let moving=0;
  const sprint=(key.has('ShiftLeft')||key.has('ShiftRight'))&&!inTunnel&&!inLocker;
- if(!celebration&&!replay&&!playerStun){
+ if(!celebration&&!replay&&!playerStun&&!kickAim&&flight?.type!=='kick'){
    const dx=(key.has('KeyD')||key.has('ArrowRight')?1:0)-(key.has('KeyA')||key.has('ArrowLeft')?1:0)+stick.x;
    const dz=(key.has('KeyS')||key.has('ArrowDown')?1:0)-(key.has('KeyW')||key.has('ArrowUp')?1:0)+stick.y;
    const dir=direction.set(dx,dz);
@@ -508,14 +634,14 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  if(enteredTunnel&&!inTunnel&&!inLocker)mapOpen=false;
  inLocker=enteredLocker;
  inTunnel=enteredTunnel;
- if(ambienceChanged)updateAmbience();
+ if(ambienceChanged){updateAmbience();publishPlay();}
  const showTeammate=playMode&&!inLocker&&!inTunnel;
  if(teammateActive!==showTeammate){
    teammateActive=showTeammate;
    teammate.activate(showTeammate,pos);
  }
- teammate.update(dt,pos,Boolean(flight),elapsed);
- const warning=defense.update(dt,pos,motion,playMode&&!replay&&!inLocker&&!inTunnel&&Math.abs(pos.x)<26&&Math.abs(pos.z)<43,reducedMotion);
+ teammate.update(dt,pos,flight?.type==='pass',elapsed,conversionEnd);
+ const warning=defense.update(dt,pos,motion,playMode&&!replay&&!celebration&&!kickAim&&flight?.type!=='kick'&&!inLocker&&!inTunnel&&Math.abs(pos.x)<26&&Math.abs(pos.z)<(conversionEnd?48:43),reducedMotion);
  if(warning&&!defenderWarning&&!playerStun)onStatus('¡Defensor cerca! Cambia de dirección o acelera.');
  defenderWarning=warning;
  current=inTunnel||inLocker?null:zones.find(z=>Math.hypot(pos.x-z.x,pos.z-z.z)<(z.portal?5:4));
@@ -524,17 +650,24 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  const interaction=current||receiver;
  nearMarker.visible=Boolean(interaction && current?.kind!=='tunnel');
  if(nearMarker.visible)nearMarker.position.set(interaction.x,.086,interaction.z);
- const actionText=inLocker?'Abrir contacto':inTunnel?assistedWalk?'Detener avance':'Avanzar al camarín':current?.portal?'Ver proyectos':current?.kind==='tunnel'?'Entrar al túnel':current?'Abrir panel':receiver?'Abrir ficha':playMode?'Pasar a #87':'Abrir proyectos';
+ const actionText=inLocker?'Abrir contacto':inTunnel?assistedWalk?'Detener avance':'Avanzar al camarín':current?.portal?'Ver proyectos':current?.kind==='tunnel'?'Entrar al túnel':current?'Abrir panel':receiver?'Abrir ficha':playMode?'Pasar al #'+teammate.number:'Abrir proyectos';
  const label=inLocker?'Camarín':inTunnel?'Túnel':'';
  const zoneLabel=label||current?.label||receiver?.p.title||(playMode?'Jugada rápida':'Recorrido libre');
- const interactionKey=zoneLabel+':'+actionText;
+ const interactionKey=zoneLabel+':'+actionText+':'+teammate.number;
  if(!replay&&interactionKey!==lastInteraction){
-   const hint=inLocker?'Toca la pantalla de Contacto o pulsa Enter.':inTunnel?'Avanza por el pasillo iluminado.':current?.kind==='tunnel'?'Cruza a pie o activa el avance guiado.':receiver&&playMode?'Enter abre la ficha. Espacio pasa al #87.':interaction?'Pulsa Enter o toca el destino.':playMode?'Pasa al #87 y esquiva a los defensores.':'Toca una etiqueta o abre el catálogo.';
+   const hint=inLocker?'Toca la pantalla de Contacto o pulsa Enter.':inTunnel?'Avanza por el pasillo iluminado.':current?.kind==='tunnel'?'Cruza a pie o activa el avance guiado.':receiver&&playMode?'Enter abre la ficha. Espacio pasa al #'+teammate.number+'.':interaction?'Pulsa Enter o toca el destino.':playMode?'Cruza la línea de gol con el balón. K permite patear.':'Toca una etiqueta o abre el catálogo.';
    onZone(zoneLabel,hint,actionText,showTeammate);
-   score(zoneLabel);
+   if(!celebration&&!kickAim&&flight?.type!=='kick')score(pendingTry?'PUNTO EXTRA O CONVERSIÓN':zoneLabel);
    lastInteraction=interactionKey;
  }
- if(playMode&&!replay&&current?.portal&&current!==zoneLock&&!flight)touchdown(current);
+ const end=endZone(pos);
+ const crossed=end&&previousPosition.z*end<goalLine
+   &&Math.abs(THREE.MathUtils.lerp(previousPosition.x,pos.x,(end*goalLine-previousPosition.z)/(pos.z-previousPosition.z)))<=fieldHalfWidth;
+ if(playMode&&end&&(crossed||caughtInEnd===end)&&!replay&&!celebration&&!flight&&!playerStun&&!kickAim){
+   if(conversionEnd===end||(!conversionEnd&&!pendingTry))touchdown(end);
+ }
+ caughtInEnd=0;
+ previousPosition.copy(pos);
  player.update(dt,moving,sprint);
  if(playerStun>0){
    const fall=Math.min(1,(.8-playerStun)*7,playerStun*4);
@@ -547,27 +680,49 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  playerShadow.material.opacity= .62-Math.min(player.model.position.y,.5)*.36;
  if(flight){
    flight.time+=dt;
-   if(!flight.released&&flight.time>=.22) {
-     player.releaseBall(flight.from);
-     flight.to.copy(teammate.aim(pos));
+   const isKick=flight.type==='kick';
+   if(!flight.released&&flight.time>=flight.releaseAt) {
+     if(isKick) {
+       player.ball.visible=false;
+     } else {
+       player.releaseBall(flight.from);
+       flight.to.copy(teammate.aim(pos));
+     }
      flight.ball.visible=true;
      flight.released=true;
    }
    if(flight.released){
-     const t=Math.min(1,(flight.time-.22)/flight.duration);
-     const arc=Math.min(3.8,flight.duration*3.3);
+     const t=Math.min(1,(flight.time-flight.releaseAt)/flight.duration);
      flight.ball.position.lerpVectors(flight.from,flight.to,t);
-     flight.ball.position.y+=4*t*(1-t)*arc;
+     flight.ball.position.y+=4*t*(1-t)*flight.arc;
      tangent.subVectors(flight.to,flight.from);
-     tangent.y+=4*(1-2*t)*arc;
+     tangent.y+=4*(1-2*t)*flight.arc;
      flight.ball.quaternion.setFromUnitVectors(axis,tangent.normalize());
      flight.ball.rotateZ(t*26);
+     if(isKick&&!flight.resolved&&t>=flight.goalFraction){
+       flight.resolved=true;
+       if(isGoodKick(flight.goalX,flight.goalHeight)){
+         addScore(flight.extra?'extraPoint':'fieldGoal',flight.extra?'PUNTO EXTRA':'GOL DE CAMPO');
+       } else {
+         score('PATADA FALLIDA');
+         onTouchdown('PATADA FALLIDA');
+       }
+     }
      if(t===1){
        scene.remove(flight.ball);
-       teammate.catchBall();
-       returnBallIn=.96;
        flight=null;
-       onStatus('Pase completo · #87 recibió el balón.');
+       if(isKick)player.recoverBall();
+       else {
+         player=teammate.exchange(player);
+         player.recoverBall();
+         caughtInEnd=endZone(player.root.position);
+         previousPosition.copy(player.root.position);
+         playerStun=0;
+         if(conversionEnd)cameraYaw=conversionEnd<0?0:Math.PI;
+         motion.set(0,0);
+         publishPlay();
+         onStatus('Pase completo · ahora controlas al #'+player.number+'.');
+       }
      }
    }
  }
@@ -624,14 +779,14 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  requestAnimationFrame(frame);
  const initialSnow=document.getElementById('snow');initialSnow.setAttribute('aria-pressed',snow.visible);initialSnow.textContent='Nieve: '+(snow.visible?'sí':'no');
  return {
-   backend,action,setQuality,guideToTunnel,leaveLocker,
+   backend,action,kick,tryForTwo,skipTry(){pendingTry=0;cancelKick();publishPlay();},setQuality,guideToTunnel,leaveLocker,
    get inLocker(){return inLocker;},
    pass(){if(playMode&&teammateActive&&!paused&&!replay&&!playerStun)launch();},
    openDestination(repo){const target=targets.find(item=>item.p.repo===repo);if(target&&!paused)cueProject(target.p);},
-   togglePlayMode(){stopMovement();playMode=!playMode;lastInteraction='';return playMode;},
+   togglePlayMode(){stopMovement();playMode=!playMode;scoringMode=playMode;pendingTry=conversionEnd=caughtInEnd=0;previousPosition.copy(player.root.position);celebration=null;lastInteraction='';publishPlay();return playMode;},
    centerCamera(){cameraYaw=inTunnel||inLocker?Math.PI/2:defaultYaw;cameraPitch=defaultPitch;},
    toggleMap(){if(inTunnel||inLocker)return false;mapOpen=!mapOpen;collision.reset();if(!mapOpen)snapView=true;return mapOpen;},
-   pause(value){paused=value;clearInput();motion.set(0,0);drag=null;if(value)replay=null;},
+   pause(value){paused=value;clearInput();motion.set(0,0);drag=null;if(value){replay=null;cancelKick();}},
    toggleSnow(){snowEnabled=!snowEnabled;syncSnow();return snowEnabled;},
    toggleSound(){
      muted=!muted;
