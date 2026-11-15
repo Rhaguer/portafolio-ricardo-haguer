@@ -9,6 +9,7 @@
     <p class="intro">Conecto aplicaciones, información y dispositivos para resolver problemas concretos.</p>
     <div class="welcome-actions">
       <a class="primary" href="./classic.html#proyectos" data-open="all">Explorar proyectos <span aria-hidden="true">↗</span></a>
+      <button type="button" data-tour class="secondary">Recorrido guiado</button>
       <button id="enter" class="secondary">Entrar al estadio 3D</button>
     </div>
     <p id="loading" role="status"></p>
@@ -19,5 +20,5 @@
     <div id="home-projects" class="home-projects"></div>
   </section>
 </main>
-<aside id="play-hud" hidden><div class="location"><span>JUGADA ACTUAL</span><strong id="zone-label">Túnel · Perfil profesional</strong><small id="hint">WASD / Flechas para explorar</small><small id="graphics"></small></div><nav class="quick" aria-label="Acceso directo al contenido"><button data-open="profile">Perfil</button><button data-open="skills">Método</button><button data-open="contact">Contacto</button><button id="map" aria-pressed="false">Mapa</button></nav><div class="bottom-hud"><span>WASD mover · Shift sprint · Espacio pase · Enter abrir</span><button id="interact" class="primary">ABRIR ZONA ↗</button></div><p id="touch-hint">Toca un portal o un receptor</p><div id="joystick" aria-label="Joystick de movimiento"><i></i></div><button id="touch-action" class="primary">PASE / ABRIR</button></aside>
+<aside id="play-hud" hidden><div class="location"><span>JUGADA ACTUAL</span><strong id="zone-label">Túnel · Perfil profesional</strong><small id="hint">WASD / Flechas para explorar</small><div class="graphics-controls"><small id="graphics"></small><label for="quality">Gráficos</label><select id="quality"><option value="auto">Auto</option><option value="high">Alta</option><option value="light">Ligera</option></select></div></div><nav class="quick" aria-label="Acceso directo al contenido"><button data-open="profile">Perfil</button><button data-open="skills">Método</button><button data-open="contact">Contacto</button><button type="button" data-tour>Recorrido</button><button id="map" aria-pressed="false">Mapa</button><button id="camera-center">Centrar cámara</button></nav><div class="bottom-hud"><span>WASD mover · Arrastra para mirar · Espacio: acción</span><button id="interact" class="primary">ABRIR ZONA ↗</button></div><p id="touch-hint">Arrastra el campo para girar la cámara</p><div id="joystick" aria-label="Joystick de movimiento"><i></i></div><button id="touch-action" class="primary">Pasar</button></aside>
 <dialog id="panel" aria-labelledby="panel-title"><button id="close" aria-label="Cerrar panel" autofocus>×</button><div id="panel-content"></div></dialog><div id="announcement" role="status" aria-live="polite"></div><noscript><p>La experiencia 3D necesita JavaScript. <a href="./classic.html">Consultar perfil y proyectos en Vista Clásica</a>.</p></noscript><script type="module" src="/src/main.js"></script></body></html>
