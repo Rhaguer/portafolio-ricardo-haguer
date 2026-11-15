@@ -1,17 +1,21 @@
 import * as THREE from 'three';
 import {PlayerAvatar} from './avatar.js';
 import {createDefense} from './defense.js';
+import {createReceiver} from './receiver.js';
+import {createCameraCollision} from './follow-camera.js';
 import { addAtmosphere, addGrandstands, addLockerRoom, addTunnel, contactShadow, createRenderer, turfMaterial } from './stadium.js';
 const GREEN='#203731',GOLD='#FFB612';
 const tunnelZ=-1, tunnelMouth=-32.25, tunnelEnd=-47.62, lockerX=-54.45;
 const insideTunnel = pos => pos.x<tunnelMouth && Math.abs(pos.z-tunnelZ)<3.4;
-export async function createGame({container,projects,onOpen,onProject,onZone,onTouchdown,onFailure,onStatus=()=>{},onRoom=()=>{},onQuality=()=>{}}){
+export async function createGame({container,projects,onOpen,onProject,onZone,onTouchdown,onFailure,onStatus=()=>{},onRoom=()=>{},onQuality=()=>{},onDestinations=()=>{}}){
  const scene = new THREE.Scene();
  const compact = matchMedia('(pointer: coarse)').matches;
  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
  const {renderer, backend} = await createRenderer(() => document.createElement('canvas'), compact);
+ const viewport = () => ({width:container.clientWidth || innerWidth,height:container.clientHeight || innerHeight});
+ let {width,height}=viewport();
  renderer.setPixelRatio(Math.min(devicePixelRatio, compact ? 1.18 : 1.55));
- renderer.setSize(innerWidth, innerHeight);
+ renderer.setSize(width,height,false);
  container.appendChild(renderer.domElement);
  renderer.domElement.setAttribute('aria-hidden','true');
  renderer.domElement.addEventListener('webglcontextlost', onFailure, {once:true});
@@ -19,7 +23,7 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
    const deviceLost = renderer.onDeviceLost.bind(renderer);
    renderer.onDeviceLost = info => { deviceLost(info); onFailure(); };
  }
- const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, .1, 310);
+ const camera = new THREE.PerspectiveCamera(46, width / height, .1, 310);
  camera.position.set(-11, 12.5, 23);
  addAtmosphere(scene);
  scene.add(new THREE.HemisphereLight('#bdccf4', '#55594b', 1.28));
@@ -31,9 +35,10 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  sun.shadow.normalBias = .035;
  sun.shadow.bias = -.00025;
  scene.add(sun);
+ const solids=[];
  const materials=new Map();function material(color){if(!materials.has(color))materials.set(color,new THREE.MeshStandardMaterial({color,roughness:.86}));return materials.get(color)}
- function box(w,h,d,color,x,y,z,parent=scene){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material(color));m.position.set(x,y,z);m.receiveShadow=true;m.castShadow=h>.1;parent.add(m);return m}
- function cylinder(radius,height,color,x,y,z,parent=scene){const m=new THREE.Mesh(new THREE.CylinderGeometry(radius,radius,height,12),material(color));m.position.set(x,y,z);m.castShadow=true;parent.add(m);return m}
+ function box(w,h,d,color,x,y,z,parent=scene){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material(color));m.position.set(x,y,z);m.receiveShadow=true;m.castShadow=h>.1;parent.add(m);if(h>.28&&y>=.3)solids.push(m);return m}
+ function cylinder(radius,height,color,x,y,z,parent=scene){const m=new THREE.Mesh(new THREE.CylinderGeometry(radius,radius,height,12),material(color));m.position.set(x,y,z);m.castShadow=true;parent.add(m);solids.push(m);return m}
  function textTexture(text,{bg=GREEN,color='#ffffff',width=1024,height=160,size=70}={}){const c=document.createElement('canvas');c.width=width;c.height=height;const ctx=c.getContext('2d');if(bg){ctx.fillStyle=bg;ctx.fillRect(0,0,width,height);}ctx.fillStyle=color;ctx.font=`800 ${size}px Arial`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,width/2,height/2,width-35);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t}
  function sign(text,x,y,z,w=10,h=1.5,color='#fff'){const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:textTexture(text,{color}),side:THREE.DoubleSide}));mesh.position.set(x,y,z);scene.add(mesh);return mesh}
  function groundText(text,x,z,w=10,h=4,color='#fff',bg=null){const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:textTexture(text,{color,bg}),side:THREE.DoubleSide,transparent:!bg,depthWrite:!!bg}));m.rotation.x=-Math.PI/2;m.position.set(x,.065,z);scene.add(m);return m}
@@ -61,13 +66,20 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  const hashes=[];for(let i=0;i<50;i++)for(const x of [-3,3,-26,26])hashes.push({x,y:.05,z:-47+i*1.92});
  instances(hashes,new THREE.BoxGeometry(.65,.04,.08),material('#ffffff'));
  const stands = addGrandstands(scene, compact);
+ // Low perimeter walls follow the service lane. Leave the west tunnel aperture open.
+ box(.46,2.12,120,'#203a33',33.3,1.06,0);
+ box(.46,2.12,57.5,'#203a33',-33.3,1.06,-34.1);
+ box(.46,2.12,56.7,'#203a33',-33.3,1.06,32.2);
+ for(const z of [-63.2,63.2])box(66.5,1.98,.52,'#203a33',0,.99,z);
  const lamps=[];for(const x of [-43,43])for(const z of [-64,64]){const flood=new THREE.SpotLight('#fff7d6',1900,72,.64,.65,2);flood.position.set(x,20,z);flood.target.position.set(x*.40,0,z*.42);scene.add(flood,flood.target);cylinder(.22,20,'#627568',x,10,z);for(let i=0;i<6;i++)lamps.push({x:x+(i%3-1)*.95,y:20+Math.floor(i/3)*.75,z,sx:.8,sy:.55,sz:.6});}instances(lamps,new THREE.BoxGeometry(1,1,1),new THREE.MeshStandardMaterial({color:'#fff8d3',emissive:'#fff1a0',emissiveIntensity:1}));
  // Tunnel and profile mat.
- addTunnel(scene);
+ const tunnel = addTunnel(scene);
  const tunnelSign=sign('TÚNEL  /  CAMARÍN',tunnelMouth+.12,3.82,tunnelZ,7.5,.84,GOLD);
  tunnelSign.rotation.y=Math.PI/2;
  const lockerCenter = new THREE.Vector3(lockerX,0,tunnelZ);
  const locker = addLockerRoom(scene,lockerCenter);
+ tunnel.traverse(object=>{if(object.userData.cameraSolid)solids.push(object);});
+ locker.traverse(object=>{if(object.userData.cameraSolid)solids.push(object);});
  const lockerSign=sign('CONTACTO',0,2.49,-6.44,5.42,2.12,'#f4f8ed');
  locker.add(lockerSign);
  const playerShadow = contactShadow(scene);
@@ -87,7 +99,7 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
    const panelZ=side*62.4;
    box(21,1.40,.55,'#203b35',zone.x,1.28,panelZ);
    box(21,.12,.6,'#799084',zone.x,.58,panelZ);
-   const label=sign(zone.label.toUpperCase(),zone.x,1.3,panelZ-side*.29,19.4,1.18,'#e0e9df');
+   const label=sign(zone.label.toUpperCase(),zone.x,1.3,panelZ-side*.29,19.4,1.18,'#ffe5a0');
    label.rotation.y=side>0?Math.PI:0;
    zone.features=[label];
  }
@@ -138,9 +150,12 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  for(const p of projects)if(featured.length<4&&!featured.includes(p))featured.push(p);
  const targets=featured.slice(0,4).map((p,i)=>{
    const x=i%2?13:-13,z=[-28.8,-9.6,9.6,28.8][i];
-   const marker=groundText(String(i+1),x,z,2.1,2.2,'#e5f5e9');
+   const marker=groundText('+ '+String(i+1),x,z,3.6,2.7,'#edf8e9');
    return {x,z,p,marker};
  });
+ scene.updateMatrixWorld(true);
+ const collision=createCameraCollision(solids);
+ const teammate=createReceiver(scene);
  const snowCount=320;
  const snowflakes=Array.from({length:snowCount},()=>({x:(Math.random()-.5)*90,y:Math.random()*35,z:(Math.random()-.5)*140}));
  const snow=instances(snowflakes,new THREE.OctahedronGeometry(.105),new THREE.MeshBasicMaterial({color:'#ffffff',transparent:true,opacity:.76,depthWrite:false}));
@@ -148,9 +163,10 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  const confettiItems=Array.from({length:90},(_,i)=>({x:0,y:-5,z:0,color:i%2?GOLD:GREEN}));const confetti=instances(confettiItems,new THREE.BoxGeometry(.14,.25,.08),material('#ffffff'));const confettiVel=confettiItems.map(()=>new THREE.Vector3());let confettiTime=0;
  confetti.frustumCulled=false;confetti.receiveShadow=false;confetti.visible=false;
  let muted=true,audio=null,paused=false,hidden=false,current=null,lastInteraction='',zoneLock=null,flight=null,zoom=0,elapsed=0,celebration=null,mapOpen=false;
- let cameraYaw=.065,cameraPitch=.28;
+ let cameraYaw=.065,cameraPitch=.39,smoothedYaw=cameraYaw,smoothedPitch=cameraPitch;
+ let snapView=true;
  let playMode=false, inLocker=false, inTunnel=false, playerStun=0, defenderWarning=false;
- let replay=null, ambience=null, assistedWalk=false;
+ let replay=null, ambience=null, assistedWalk=false, returnBallIn=0;
  const replayView=new THREE.Vector3(0,12,-41), replayLook=new THREE.Vector3(0,12.7,-69);
  const defense=createDefense(scene,()=>{
    playerStun=.8;
@@ -168,6 +184,7 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
    clearInput();
    motion.set(0,0);
    playerStun=0;
+   if(returnBallIn>0){returnBallIn=0;player.recoverBall();}
    if(flight){scene.remove(flight.ball);flight=null;player.recoverBall();player.throwTime=0;}
  }
  function cueProject(project) {
@@ -186,6 +203,7 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
    cameraYaw=Math.PI/2;
    cameraPitch=.25;
    mapOpen=false;
+   snapView=true;
    lastInteraction='';
  }
  function leaveLocker() {
@@ -196,6 +214,7 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
    player.root.rotation.y=Math.PI/2;
    cameraYaw=0;
    cameraPitch=defaultPitch;
+   snapView=true;
    onRoom(false);
    updateAmbience();
    lastInteraction='';
@@ -294,15 +313,19 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  }
  const key=new Set(),stick=new THREE.Vector2();const clearInput=()=>{key.clear();resetStick()};window.addEventListener('blur',clearInput);document.addEventListener('visibilitychange',()=>{hidden=document.hidden;if(hidden)clearInput();updateAmbience()});
  window.addEventListener('keydown',e=>{if(paused||e.altKey||e.ctrlKey||e.metaKey||e.target.closest?.('input,textarea,select,[contenteditable]')||(['Enter','Space'].includes(e.code)&&e.target.closest?.('button,a')))return;if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter'].includes(e.code))e.preventDefault();key.add(e.code);if(!e.repeat&&(e.code==='Space'||e.code==='Enter'))action(e.code==='Enter')});window.addEventListener('keyup',e=>key.delete(e.code));
- const joystick=document.getElementById('joystick'),knob=joystick.querySelector('i');let pointer=null;joystick.addEventListener('pointerdown',e=>{pointer=e.pointerId;joystick.setPointerCapture(pointer);updateStick(e)});joystick.addEventListener('pointermove',e=>{if(e.pointerId===pointer)updateStick(e)});function updateStick(e){const r=joystick.getBoundingClientRect();stick.set((e.clientX-r.left-r.width/2)/45,(e.clientY-r.top-r.height/2)/45);if(stick.length()>1)stick.normalize();knob.style.transform=`translate(${stick.x*35}px,${stick.y*35}px)`}function resetStick(){pointer=null;stick.set(0,0);knob.style.transform=''}joystick.addEventListener('pointerup',resetStick);joystick.addEventListener('pointercancel',resetStick);joystick.addEventListener('lostpointercapture',resetStick);
+ const joystick=document.getElementById('joystick'),knob=joystick.querySelector('i');let pointer=null;joystick.addEventListener('pointerdown',e=>{pointer=e.pointerId;joystick.setPointerCapture(pointer);updateStick(e)});joystick.addEventListener('pointermove',e=>{if(e.pointerId===pointer)updateStick(e)});function updateStick(e){const r=joystick.getBoundingClientRect();stick.set((e.clientX-r.left-r.width/2)/(r.width*.42),(e.clientY-r.top-r.height/2)/(r.height*.42));if(stick.length()>1)stick.normalize();knob.style.transform=`translate(${stick.x*r.width*.30}px,${stick.y*r.height*.30}px)`}function resetStick(){pointer=null;stick.set(0,0);knob.style.transform=''}joystick.addEventListener('pointerup',resetStick);joystick.addEventListener('pointercancel',resetStick);joystick.addEventListener('lostpointercapture',resetStick);
  function sound(){if(muted||!audioContext)return;audio??=new audioContext();audio.resume().catch(()=>{});[392,523.25,659.25,783.99].forEach((hz,i)=>{const o=audio.createOscillator(),g=audio.createGain();o.type='triangle';o.frequency.value=hz;g.gain.setValueAtTime(0,audio.currentTime+i*.12);g.gain.linearRampToValueAtTime(.1,audio.currentTime+i*.12+.015);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+i*.12+.38);o.connect(g);g.connect(audio.destination);o.start(audio.currentTime+i*.12);o.stop(audio.currentTime+i*.12+.4)})}
  function touchdown(zone){if(celebration)return;celebration=zone;motion.set(0,0);zoneLock=zone;zoom=reducedMotion?0:1.8;player.celebrate();onTouchdown();score('TOUCHDOWN · '+zone.label,true);sound();confettiTime=2;confettiItems.forEach((p,i)=>{p.x=player.root.position.x;p.y=1;p.z=player.root.position.z;confettiVel[i].set((Math.random()-.5)*10,5+Math.random()*9,(Math.random()-.5)*10)});setTimeout(()=>{celebration=null;score(zone.label);if(!paused)onOpen(zone.kind)},reducedMotion?250:950)}
  const ballGeometry = new THREE.SphereGeometry(1, 24, 15);
  const lacesGeometry = new THREE.CapsuleGeometry(.009,.046,2,5);
  const axis = new THREE.Vector3(0,0,1);
  const tangent = new THREE.Vector3();
- function launch(target) {
-   if(flight||celebration)return;
+ function launch() {
+   if(flight||celebration||returnBallIn>0)return;
+   const passer=player.root.position;
+   const span=passer.distanceTo(teammate.position);
+   if(span>27){onStatus('Acércate al receptor #87 para pasar.');return;}
+   player.root.rotation.y=Math.atan2(teammate.position.x-passer.x,teammate.position.z-passer.z);
    const ball=new THREE.Group();
    const leather=new THREE.Mesh(ballGeometry,material('#77472e'));
    leather.scale.set(.152,.152,.262);
@@ -317,7 +340,7 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
    ball.visible=false;
    scene.add(ball);
    player.throw();
-   flight={ball,from:new THREE.Vector3(),to:new THREE.Vector3(),time:0,target,released:false};
+   flight={ball,from:new THREE.Vector3(),to:teammate.aim(passer).clone(),time:0,duration:THREE.MathUtils.clamp(span/20,.62,1.08),released:false};
  }
 
  function receiverNear(pos) {
@@ -334,6 +357,7 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
    if(paused||celebration||replay||flight||playerStun>0)return;
    if(inLocker){onOpen('contact');return;}
    if(inTunnel){assistedWalk=!assistedWalk;return;}
+   if(!enter&&playMode&&(!current||current.portal)){if(teammateActive)launch();return;}
    if(current){
      if(current.portal && playMode)touchdown(current);
      else if(current.kind==='tunnel'){
@@ -344,7 +368,6 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
    }
    const target=receiverNear(player.root.position);
    if(target && (enter||!playMode))cueProject(target.p);
-   else if(!enter && playMode)launch(target);
    else if(!playMode)onOpen('all');
  }
  const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
@@ -403,12 +426,42 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
    }
    if(!hit?.target)return;
    const target=hit.target;
-   if(playMode&&Math.hypot(player.root.position.x-target.x, player.root.position.z-target.z)<10)launch(target);
-   else cueProject(target.p);
+   cueProject(target.p);
  });
- function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)}window.addEventListener('resize',resize);
+ function resize(){
+   ({width,height}=viewport());
+   camera.aspect=width/height;
+   camera.fov=camera.aspect<.85?55:46;
+   camera.updateProjectionMatrix();
+   renderer.setSize(width,height,false);
+ }window.addEventListener('resize',resize);
+ resize();
  const zero=new THREE.Vector2(),direction=new THREE.Vector2(),cameraOffset=new THREE.Vector3(),desired=new THREE.Vector3(),lookAt=new THREE.Vector3(),lookTarget=new THREE.Vector3();
- let tunnelBlend=0;
+ const cameraAnchor=new THREE.Vector3(), followPoint=new THREE.Vector3(), lead=new THREE.Vector3();
+ const projection=new THREE.Vector3(), worldTag=new THREE.Vector3();
+ const destinations=targets.map(target=>({repo:target.p.repo,x:0,y:0,visible:false}));
+ let tunnelBlend=0, destinationTimer=0, teammateActive=false;
+ function publishDestinations(dt, hide) {
+   destinationTimer-=dt;
+   if(destinationTimer>0)return;
+   destinationTimer=.04;
+   for(const [i,target] of targets.entries()){
+     worldTag.set(target.x,.48,target.z);
+     projection.copy(worldTag).project(camera);
+     const marker=destinations[i];
+     marker.x=(projection.x*.5+.5)*width;
+     marker.y=(.5-projection.y*.5)*height;
+     marker.visible=!hide&&projection.z<1&&projection.z>-1
+       &&marker.x>58&&marker.x<width-58&&marker.y>100&&marker.y<height-(compact?155:90)
+       &&camera.position.distanceToSquared(worldTag)<5600
+       &&!collision.occluded(camera.position,worldTag);
+   }
+   const visible=destinations.filter(marker=>marker.visible).sort((a,b)=>b.y-a.y);
+   for(const [index, marker] of visible.entries()){
+     if(visible.slice(0,index).some(other=>other.visible&&Math.abs(marker.x-other.x)<132&&Math.abs(marker.y-other.y)<39))marker.visible=false;
+   }
+   onDestinations(destinations);
+ }
  let prev=performance.now();
  function frame(now){
  requestAnimationFrame(frame);
@@ -420,6 +473,10 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  elapsed+=dt;
  const pos=player.root.position;
  playerStun=Math.max(0,playerStun-dt);
+ if(returnBallIn>0){
+   returnBallIn=Math.max(0,returnBallIn-dt);
+   if(returnBallIn===0)player.recoverBall();
+ }
  let moving=0;
  const sprint=(key.has('ShiftLeft')||key.has('ShiftRight'))&&!inTunnel&&!inLocker;
  if(!celebration&&!replay&&!playerStun){
@@ -452,6 +509,12 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  inLocker=enteredLocker;
  inTunnel=enteredTunnel;
  if(ambienceChanged)updateAmbience();
+ const showTeammate=playMode&&!inLocker&&!inTunnel;
+ if(teammateActive!==showTeammate){
+   teammateActive=showTeammate;
+   teammate.activate(showTeammate,pos);
+ }
+ teammate.update(dt,pos,Boolean(flight),elapsed);
  const warning=defense.update(dt,pos,motion,playMode&&!replay&&!inLocker&&!inTunnel&&Math.abs(pos.x)<26&&Math.abs(pos.z)<43,reducedMotion);
  if(warning&&!defenderWarning&&!playerStun)onStatus('¡Defensor cerca! Cambia de dirección o acelera.');
  defenderWarning=warning;
@@ -461,13 +524,13 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  const interaction=current||receiver;
  nearMarker.visible=Boolean(interaction && current?.kind!=='tunnel');
  if(nearMarker.visible)nearMarker.position.set(interaction.x,.086,interaction.z);
- const actionText=inLocker?'Abrir contacto':inTunnel?assistedWalk?'Detener avance':'Avanzar al camarín':current?.portal?'Ver proyectos':current?.kind==='tunnel'?'Entrar al túnel':current?'Abrir panel':receiver?playMode?'Pasar al receptor':'Abrir ficha':playMode?'Pasar':'Abrir proyectos';
+ const actionText=inLocker?'Abrir contacto':inTunnel?assistedWalk?'Detener avance':'Avanzar al camarín':current?.portal?'Ver proyectos':current?.kind==='tunnel'?'Entrar al túnel':current?'Abrir panel':receiver?'Abrir ficha':playMode?'Pasar a #87':'Abrir proyectos';
  const label=inLocker?'Camarín':inTunnel?'Túnel':'';
  const zoneLabel=label||current?.label||receiver?.p.title||(playMode?'Jugada rápida':'Recorrido libre');
  const interactionKey=zoneLabel+':'+actionText;
  if(!replay&&interactionKey!==lastInteraction){
-   const hint=inLocker?'Toca la pantalla de Contacto o pulsa Enter.':inTunnel?'Avanza por el pasillo iluminado.':current?.kind==='tunnel'?'Cruza a pie o activa el avance guiado.':receiver&&playMode?'Enter abre la ficha. Espacio lanza el pase.':interaction?'Pulsa Enter o toca el destino.':'Explora el estadio o abre el catálogo.';
-   onZone(zoneLabel,hint,actionText);
+   const hint=inLocker?'Toca la pantalla de Contacto o pulsa Enter.':inTunnel?'Avanza por el pasillo iluminado.':current?.kind==='tunnel'?'Cruza a pie o activa el avance guiado.':receiver&&playMode?'Enter abre la ficha. Espacio pasa al #87.':interaction?'Pulsa Enter o toca el destino.':playMode?'Pasa al #87 y esquiva a los defensores.':'Toca una etiqueta o abre el catálogo.';
+   onZone(zoneLabel,hint,actionText,showTeammate);
    score(zoneLabel);
    lastInteraction=interactionKey;
  }
@@ -486,14 +549,13 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
    flight.time+=dt;
    if(!flight.released&&flight.time>=.22) {
      player.releaseBall(flight.from);
-     if(flight.target)flight.to.set(flight.target.x,1.8,flight.target.z);
-     else flight.to.copy(flight.from).add(new THREE.Vector3(Math.sin(player.root.rotation.y)*15,0,Math.cos(player.root.rotation.y)*15)).y=.18;
+     flight.to.copy(teammate.aim(pos));
      flight.ball.visible=true;
      flight.released=true;
    }
    if(flight.released){
-     const t= Math.min(1,(flight.time-.22)/.90);
-     const arc=3.6;
+     const t=Math.min(1,(flight.time-.22)/flight.duration);
+     const arc=Math.min(3.8,flight.duration*3.3);
      flight.ball.position.lerpVectors(flight.from,flight.to,t);
      flight.ball.position.y+=4*t*(1-t)*arc;
      tangent.subVectors(flight.to,flight.from);
@@ -501,40 +563,53 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
      flight.ball.quaternion.setFromUnitVectors(axis,tangent.normalize());
      flight.ball.rotateZ(t*26);
      if(t===1){
-       const {target,ball}=flight;
-       scene.remove(ball);
-       player.recoverBall();
+       scene.remove(flight.ball);
+       teammate.catchBall();
+       returnBallIn=.96;
        flight=null;
-       if(target)cueProject(target.p);
+       onStatus('Pase completo · #87 recibió el balón.');
      }
    }
  }
  if(!inLocker&&confettiTime>0){confettiTime-=dt;confettiItems.forEach((p,i)=>{confettiVel[i].y-=12*dt;p.x+=confettiVel[i].x*dt;p.y+=confettiVel[i].y*dt;p.z+=confettiVel[i].z*dt;temp.position.set(p.x,p.y,p.z);temp.scale.set(1,1,1);temp.rotation.set(elapsed*i,0,elapsed*2);temp.updateMatrix();confetti.setMatrixAt(i,temp.matrix)});confetti.instanceMatrix.needsUpdate=true;confetti.visible=true}else confetti.visible=false;
  if(!inLocker&&snow.visible&&!paused){for(let i=0;i<snow.count;i++){const flake=snowflakes[i];flake.x+=.18*dt;flake.y-=2*dt;if(flake.y<0)flake.y=35;temp.position.set(flake.x,flake.y,flake.z);temp.scale.setScalar(i%5*.16+.6);temp.rotation.set(elapsed*.4,i,0);temp.updateMatrix();snow.setMatrixAt(i,temp.matrix)}snow.instanceMatrix.needsUpdate=true}
  zoom=Math.max(0,zoom-dt);
- const radius=(compact?9.8:8.2)*(zoom>0?.83:1);
- cameraOffset.set(Math.sin(cameraYaw)*Math.cos(cameraPitch)*radius,
-   Math.sin(cameraPitch)*radius+1.18,Math.cos(cameraYaw)*Math.cos(cameraPitch)*radius);
- tunnelBlend=THREE.MathUtils.damp(tunnelBlend,inTunnel||inLocker?1:0,8,dt);
+ const instant=reducedMotion||snapView;
+ const blend=instant?1:1-Math.exp(-5.2*dt);
+ const angle=cameraYaw-smoothedYaw;
+ smoothedYaw+=Math.atan2(Math.sin(angle),Math.cos(angle))*blend;
+ smoothedPitch=THREE.MathUtils.lerp(smoothedPitch,cameraPitch,blend);
+ const radius=(camera.aspect<.85?20:17.8)*(zoom>0?.90:1);
+ cameraOffset.set(Math.sin(smoothedYaw)*Math.cos(smoothedPitch)*radius,
+   Math.sin(smoothedPitch)*radius+1.6,Math.cos(smoothedYaw)*Math.cos(smoothedPitch)*radius);
+ tunnelBlend=instant?Number(inTunnel||inLocker):THREE.MathUtils.damp(tunnelBlend,inTunnel||inLocker?1:0,8,dt);
  if(replay){
    desired.copy(replayView);
    lookTarget.copy(replayLook);
  } else if(mapOpen){
-   desired.set(Math.sin(cameraYaw-defaultYaw)*65,innerWidth<700?174:128,innerWidth<700?39:48);
+   desired.set(Math.sin(cameraYaw-defaultYaw)*65,camera.aspect<.85?174:128,camera.aspect<.85?39:48);
    lookTarget.set(0,0,0);
  } else {
-   desired.copy(pos).add(cameraOffset);
-   lookTarget.set(pos.x-3.9*Math.sin(cameraYaw),1.55,pos.z-3.9*Math.cos(cameraYaw));
+   followPoint.lerp(pos,instant?1:1-Math.exp(-8*dt));
+   desired.copy(followPoint).add(cameraOffset);
+   lead.set(motion.x*.26,0,motion.y*.26);
+   lookTarget.set(followPoint.x-2.2*Math.sin(smoothedYaw),1.52,followPoint.z-2.2*Math.cos(smoothedYaw)).add(lead);
    if(tunnelBlend>.002){
-     desired.lerp(cameraOffset.set(pos.x+(inLocker?4.55:3.95),2.65,THREE.MathUtils.clamp(pos.z+.08,tunnelZ-2.92,tunnelZ+2.92)),tunnelBlend);
-     lookTarget.lerp(cameraOffset.set(pos.x-4.6,1.67,THREE.MathUtils.clamp(pos.z,tunnelZ-2.55,tunnelZ+2.55)),tunnelBlend);
+     desired.lerp(cameraOffset.set(pos.x+(inLocker?6.9:6.35),2.64,THREE.MathUtils.clamp(pos.z*.55+tunnelZ*.45,tunnelZ-2.8,tunnelZ+2.8)),tunnelBlend);
+     lookTarget.lerp(cameraOffset.set(pos.x-4.8,1.68,THREE.MathUtils.clamp(pos.z,tunnelZ-2.65,tunnelZ+2.65)),tunnelBlend);
    }
  }
- const blend=reducedMotion?1:1-Math.exp(-6.1*dt);
- if(elapsed===dt){camera.position.copy(desired);lookAt.copy(lookTarget);}
- camera.position.lerp(desired,blend);
+ if(mapOpen||replay)camera.position.lerp(desired,blend);
+ else{
+   cameraAnchor.set(pos.x,1.58,pos.z);
+   collision.apply(cameraAnchor,desired,dt,instant);
+   camera.position.copy(desired);
+ }
+ snapView=false;
  lookAt.lerp(lookTarget,blend);
  camera.lookAt(lookAt);
+ camera.updateMatrixWorld();
+ publishDestinations(dt,mapOpen||Boolean(replay)||inTunnel||inLocker);
  renderer.render(scene,camera);
  if(replay){
    replay.remaining-=dt;
@@ -551,9 +626,11 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  return {
    backend,action,setQuality,guideToTunnel,leaveLocker,
    get inLocker(){return inLocker;},
-   togglePlayMode(){playMode=!playMode;return playMode;},
+   pass(){if(playMode&&teammateActive&&!paused&&!replay&&!playerStun)launch();},
+   openDestination(repo){const target=targets.find(item=>item.p.repo===repo);if(target&&!paused)cueProject(target.p);},
+   togglePlayMode(){stopMovement();playMode=!playMode;lastInteraction='';return playMode;},
    centerCamera(){cameraYaw=inTunnel||inLocker?Math.PI/2:defaultYaw;cameraPitch=defaultPitch;},
-   toggleMap(){if(inTunnel||inLocker)return false;mapOpen=!mapOpen;return mapOpen;},
+   toggleMap(){if(inTunnel||inLocker)return false;mapOpen=!mapOpen;collision.reset();if(!mapOpen)snapView=true;return mapOpen;},
    pause(value){paused=value;clearInput();motion.set(0,0);drag=null;if(value)replay=null;},
    toggleSnow(){snowEnabled=!snowEnabled;syncSnow();return snowEnabled;},
    toggleSound(){
