@@ -1,4 +1,5 @@
 import { createTour } from './tour.js';
+import { caseMarkup, createCaseTabs, shareProject } from './case-study.js';
 
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -9,6 +10,7 @@ const catalog=fetch('./projects.json').then(r=>{if(!r.ok)throw Error('Catálogo 
 const tags = p => `<div class="tags" aria-label="Tecnologías">${p.tech.map(t => `<button type="button" class="tech-pill" data-tech="${esc(t)}">${esc(t)}</button>`).join('')}</div>`;
 function show(html) {
   const panel=$('panel');
+  panel.classList.remove('replay-panel');
   if(!panel.open)returnFocus=document.activeElement;
   $('panel-content').innerHTML=html;
   if(!panel.open)panel.showModal();
@@ -16,30 +18,29 @@ function show(html) {
   panel.scrollTop=0;
   game?.pause(true);
 }
+const projectHash = repo => '#proyecto/' + encodeURIComponent(repo);
+function clearProjectLink() {
+  if (location.hash.startsWith('#proyecto/')) history.replaceState(null, '', location.pathname + location.search);
+}
 function project(p, fromTour = false) {
-  if(!p)return;
-  const back=fromTour
+  if (!p) return;
+  const back = fromTour
     ? '<button class="back-projects" data-tour-return type="button">← Volver al recorrido</button>'
     : lastListing ? '<button class="back-projects" data-back-projects type="button">← Volver a proyectos</button>' : '';
-  show(`${back}<article class="case-study">
-    <div class="case-hero">
-      <div>
-        <p class="eyebrow">${esc(categoryLabels[p.category])} · ${esc(p.status)}</p>
-        <h2 id="panel-title" tabindex="-1">${esc(p.title)}</h2>
-        <p>${esc(p.summary)}</p>
-      </div>
-      <figure><img src="${esc(p.image)}" alt="" width="640" height="380"><figcaption>Ilustración del proyecto</figcaption></figure>
-    </div>
-    <section class="case-stack"><h3>Tecnologías</h3>${tags(p)}<p>Selecciona una tecnología para encontrar otros proyectos que la usan.</p></section>
-    <div class="case-details">
-      <section><h3>El problema</h3><p>${esc(p.problem)}</p></section>
-      <section><h3>La solución</h3><p>${esc(p.solution)}</p></section>
-      <section><h3>Evidencia</h3><p>${esc(p.evidence)}</p></section>
-      <section><h3>Estado y alcance</h3><p>${esc(p.limit)}</p></section>
-    </div>
-    <footer class="case-footer">${repositoryLink(p)}</footer>
-  </article>`);
+  history.replaceState(null, '', projectHash(p.repo));
+  show(back + caseMarkup(p, {esc, label:categoryLabels[p.category], tags, repositoryLink}));
+  $('panel').classList.add('replay-panel');
+  createCaseTabs($('panel-content'));
 }
+async function openSharedProject() {
+  const match = location.hash.match(/^#proyecto\/([^/]+)$/);
+  if (!match) return;
+  await catalog;
+  try { project(projects.find(p => p.repo === decodeURIComponent(match[1]))); }
+  catch (error) { if (!(error instanceof URIError)) throw error; }
+}
+window.addEventListener('hashchange', openSharedProject);
+openSharedProject();
 const categoryLabels = {
   'Desarrollo web': 'Web',
   'Automatización': 'Automatización',
@@ -48,6 +49,7 @@ const categoryLabels = {
 };
 let lastListing;
 function listing(category = '', query = '') {
+  clearProjectLink();
   let activeCategory = category || '';
   const filters = [['', 'Todos'], ...Object.entries(categoryLabels)];
   show(`<h2 id="panel-title" tabindex="-1">Proyectos</h2>
@@ -122,10 +124,10 @@ document.querySelectorAll('[data-tour]').forEach(button => button.addEventListen
   tour.start();
 }));
 $('panel-content').addEventListener('click', event => {
-  if (event.target.closest('[data-tour-return]')) tour.resume();
+  if (event.target.closest('[data-tour-return]')) { clearProjectLink(); tour.resume(); }
 });
 $('panel-content').addEventListener('click',async e=>{const b=e.target.closest('[data-project]');if(e.target.closest('[data-back-projects]')&&lastListing)listing(lastListing.category,lastListing.query);if(b)project(projects.find(p=>p.repo===b.dataset.project));if(e.target.id==='print')window.print();if(e.target.id==='copy'){try{await navigator.clipboard.writeText('https://github.com/Rhaguer');$('copy-status').textContent='Enlace copiado al portapapeles.'}catch{$('copy-status').textContent='Enlace del perfil: https://github.com/Rhaguer'}}});
-$('close').onclick=()=>$('panel').close();$('panel').addEventListener('close',()=>{game?.pause(false);returnFocus?.isConnected&&returnFocus.focus()});$('panel').addEventListener('click',e=>{if(e.target===$('panel')){const r=$('panel').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)$('panel').close()}});
+$('close').onclick=()=>$('panel').close();$('panel').addEventListener('close',()=>{clearProjectLink();game?.pause(false);if(returnFocus?.isConnected&&!returnFocus.closest('[hidden]'))returnFocus.focus();else if(game)$('world').focus()});$('panel').addEventListener('click',e=>{if(e.target===$('panel')){const r=$('panel').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)$('panel').close()}});
 const menu=$('pause-menu');
 let menuAction;
 $('game-menu').onclick=()=>{
@@ -146,7 +148,7 @@ menu.addEventListener('close',()=>{
 function afterMenu(action){menuAction=action;menu.close();}
 const goToContact=()=>{
   if(!game||game.inLocker){open('contact');return;}
-  game.visitLocker();
+  game.guideToTunnel();
   $('world').focus({preventScroll:true});
 };
 for(const button of document.querySelectorAll('[data-pause-open]')){
@@ -157,6 +159,7 @@ $('leave-room').onclick=()=>{game.leaveLocker();$('world').focus({preventScroll:
 $('panel-content').addEventListener('click',event=>{
   const tech=event.target.closest('[data-tech]');
   if(tech)listing('',tech.dataset.tech);
+  if(event.target.closest('[data-share-project]'))shareProject($('share-status'));
 });
 let statusClock;
 function status(message){
@@ -182,10 +185,12 @@ $('enter').onclick=async()=>{
       onProject:p=>{lastListing=null;project(p);},
       onFailure:()=>location.assign('./classic.html'),
       onStatus:status,
+      onQuality:level=>{
+        const labels={light:'ligera',balanced:'equilibrada',high:'alta'};
+        $('graphics-state').textContent='Calidad automática · '+labels[level];
+      },
       onRoom:inside=>{
         $('leave-room').hidden=!inside;
-        $('joystick').hidden=inside;
-        $('hint').textContent=inside?'Consulta tus enlaces o vuelve al campo.':'';
         $('map').disabled=inside;
         $('map').setAttribute('aria-pressed','false');
         $('map').textContent='Mapa aéreo';
@@ -200,6 +205,12 @@ $('enter').onclick=async()=>{
         $('announcement').textContent='TOUCHDOWN';
         setTimeout(()=>$('announcement').textContent='',1400);
       },
+    });
+    $('graphics-backend').textContent=game.backend;
+    $('play-mode').onclick=()=>afterMenu(()=>{
+      const active=game.togglePlayMode();
+      $('play-mode').setAttribute('aria-pressed',active);
+      $('play-mode').textContent=active?'Volver a recorrido libre':'Activar jugada rápida';
     });
     $('camera-center').onclick=()=>afterMenu(()=>game.centerCamera());
     $('map').onclick=()=>afterMenu(()=>{

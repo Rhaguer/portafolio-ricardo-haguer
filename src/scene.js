@@ -3,6 +3,8 @@ import {PlayerAvatar} from './avatar.js';
 import {createDefense} from './defense.js';
 import { addAtmosphere, addGrandstands, addLockerRoom, addTunnel, contactShadow, createRenderer, turfMaterial } from './stadium.js';
 const GREEN='#203731',GOLD='#FFB612';
+const tunnelZ=-1, tunnelMouth=-32.25, tunnelEnd=-47.62, lockerX=-54.45;
+const insideTunnel = pos => pos.x<tunnelMouth && Math.abs(pos.z-tunnelZ)<3.4;
 export async function createGame({container,projects,onOpen,onProject,onZone,onTouchdown,onFailure,onStatus=()=>{},onRoom=()=>{},onQuality=()=>{}}){
  const scene = new THREE.Scene();
  const compact = matchMedia('(pointer: coarse)').matches;
@@ -20,9 +22,9 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, .1, 310);
  camera.position.set(-11, 12.5, 23);
  addAtmosphere(scene);
- scene.add(new THREE.HemisphereLight('#d5e5fa', '#58624d', 1.55));
- const sun = new THREE.DirectionalLight('#ffe3b2', 2.15);
- sun.position.set(-54, 40, -34);
+ scene.add(new THREE.HemisphereLight('#bdccf4', '#55594b', 1.28));
+ const sun = new THREE.DirectionalLight('#ffca9d', 2.37);
+ sun.position.set(-54, 35, -40);
  sun.castShadow = true;
  sun.shadow.mapSize.set(compact ? 768 : 1536, compact ? 768 : 1536);
  Object.assign(sun.shadow.camera, {left:-59,right:59,top:74,bottom:-74,near:1,far:174});
@@ -47,13 +49,13 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  const field = new THREE.Mesh(new THREE.PlaneGeometry(54,96),turf);
  field.rotation.x=-Math.PI/2;field.position.y=.012;field.receiveShadow=true;scene.add(field);
  const stripeGeometry = new THREE.PlaneGeometry(54,9.6);
- const stripeMaterial = new THREE.MeshStandardMaterial({color:'#93ad70',transparent:true,opacity:.105,depthWrite:false});
+ const stripeMaterial = new THREE.MeshStandardMaterial({color:'#b4c778',transparent:true,opacity:.12,depthWrite:false});
  for(let i=0;i<10;i+=2){const strip=new THREE.Mesh(stripeGeometry,stripeMaterial);strip.rotation.x=-Math.PI/2;strip.position.set(0,.018,-43.2+i*9.6);strip.receiveShadow=true;scene.add(strip);}
  for(const x of [-27,27])box(.13,.04,116,'#ffffff',x,.05,0);
  for(let i=0;i<=10;i++){const z=-48+i*9.6;box(54,.05,.11,i===0||i===10?GOLD:'#ffffff',0,.05,z);if(i>0&&i<10){for(const x of [-21,21]){let m=groundText(String(i<=5?i*10:(10-i)*10),x,z+1.3,3.5,2,'#ffffff');if(x>0)m.rotation.z=Math.PI}}}
 
  for(const z of [-54,54]){box(54,.05,10,GREEN,0,.02,z);for(const x of [-27,27])box(.16,.06,11,GOLD,x,.05,z);box(54,.06,.18,GOLD,0,.05,z+Math.sign(z)*5);groundText(z<0?'HAGUER':'PORTFOLIO',0,z,30,5,GOLD)}
- const logo=new THREE.TextureLoader().load('./logo-rihm.webp');logo.colorSpace=THREE.SRGBColorSpace;const logoMesh=new THREE.Mesh(new THREE.PlaneGeometry(12,12),new THREE.MeshBasicMaterial({map:logo,transparent:true,depthWrite:false}));logoMesh.rotation.x=-Math.PI/2;logoMesh.position.y=.08;scene.add(logoMesh);
+
  // Instanced seating, spectators, and floodlights share geometry and materials.
  const temp=new THREE.Object3D();function instances(items,geometry,mat){const mesh=new THREE.InstancedMesh(geometry,mat,items.length);items.forEach((p,i)=>{temp.position.set(p.x,p.y,p.z);temp.scale.set(p.sx||1,p.sy||1,p.sz||1);temp.rotation.set(0,0,0);temp.updateMatrix();mesh.setMatrixAt(i,temp.matrix);if(p.color)mesh.setColorAt(i,new THREE.Color(p.color))});mesh.receiveShadow=true;scene.add(mesh);return mesh}
  const hashes=[];for(let i=0;i<50;i++)for(const x of [-3,3,-26,26])hashes.push({x,y:.05,z:-47+i*1.92});
@@ -62,11 +64,11 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  const lamps=[];for(const x of [-43,43])for(const z of [-64,64]){const flood=new THREE.SpotLight('#fff7d6',1900,72,.64,.65,2);flood.position.set(x,20,z);flood.target.position.set(x*.40,0,z*.42);scene.add(flood,flood.target);cylinder(.22,20,'#627568',x,10,z);for(let i=0;i<6;i++)lamps.push({x:x+(i%3-1)*.95,y:20+Math.floor(i/3)*.75,z,sx:.8,sy:.55,sz:.6});}instances(lamps,new THREE.BoxGeometry(1,1,1),new THREE.MeshStandardMaterial({color:'#fff8d3',emissive:'#fff1a0',emissiveIntensity:1}));
  // Tunnel and profile mat.
  addTunnel(scene);
- const tunnelSign=sign('PERFIL  /  CAMARÍN',-32.24,3.65,-1,7.5,.87,GOLD);
+ const tunnelSign=sign('TÚNEL  /  CAMARÍN',tunnelMouth+.12,3.82,tunnelZ,7.5,.84,GOLD);
  tunnelSign.rotation.y=Math.PI/2;
- const lockerCenter = new THREE.Vector3(-48,0,-1);
+ const lockerCenter = new THREE.Vector3(lockerX,0,tunnelZ);
  const locker = addLockerRoom(scene,lockerCenter);
- const lockerSign=sign('CAMARÍN  /  CONTACTO',0,3.7,-6.57,11.5,1.15,GOLD);
+ const lockerSign=sign('CONTACTO',0,2.49,-6.44,5.42,2.12,'#f4f8ed');
  locker.add(lockerSign);
  const playerShadow = contactShadow(scene);
  for (const z of [-59,59]) {
@@ -75,11 +77,11 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
    shadow.scale.set(1.66,.71,1);
  }
  const player=new PlayerAvatar();
- player.root.position.set(-25,0,-1);
- player.root.rotation.y=Math.PI/2;
+ player.root.position.set(1,0,19);
+ player.root.rotation.y=Math.PI;
  scene.add(player.root);
  player.loadOptional();
- const zones=[{x:-22,z:-52,label:'Aplicaciones web',kind:'Desarrollo web',portal:true},{x:22,z:-52,label:'Automatización',kind:'Automatización',portal:true},{x:-22,z:52,label:'Datos e IoT',kind:'IoT y datos',portal:true},{x:22,z:52,label:'Móvil',kind:'Aplicaciones móviles',portal:true},{x:-29,z:-1,label:'Perfil & experiencia',kind:'profile'},{x:29,z:0,label:'Stack & metodología',kind:'skills'},{x:0,z:57,label:'Contacto & GitHub',kind:'contact'}];
+ const zones=[{x:-22,z:-52,label:'Aplicaciones web',kind:'Desarrollo web',portal:true},{x:22,z:-52,label:'Automatización',kind:'Automatización',portal:true},{x:-22,z:52,label:'Datos e IoT',kind:'IoT y datos',portal:true},{x:22,z:52,label:'Móvil',kind:'Aplicaciones móviles',portal:true},{x:-29,z:8,label:'Perfil & experiencia',kind:'profile'},{x:29,z:0,label:'Stack & metodología',kind:'skills'},{x:-30,z:tunnelZ,label:'Túnel al camarín',kind:'tunnel',features:[tunnelSign]}];
  for (const zone of zones.filter(z => z.portal)) {
    const side=Math.sign(zone.z);
    const panelZ=side*62.4;
@@ -95,6 +97,9 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
    bar.rotation.z=Math.PI/2;
    for(const x of [-5.5,5.5])cylinder(.13,5,GOLD,x,6.5,z);
  }
+ const boardFrame=new THREE.Mesh(new THREE.BoxGeometry(34.1,11.38,.9),material('#111f1e'));
+ boardFrame.position.set(0,13,-69.1);
+ scene.add(boardFrame);
  const scoreboardSupport = new THREE.Group();
  scene.add(scoreboardSupport);
  for (const x of [-13,13]) {
@@ -104,7 +109,30 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  box(26,.54,1.7,'#43554e',0,8.5,-70,scoreboardSupport);
  let scoreboardTexture;const boardCanvas=document.createElement('canvas');boardCanvas.width=1536;boardCanvas.height=640;const boardCtx=boardCanvas.getContext('2d');scoreboardTexture=new THREE.CanvasTexture(boardCanvas);scoreboardTexture.colorSpace=THREE.SRGBColorSpace;
  box(33,11,1,GREEN,0,13,-69);const board=new THREE.Mesh(new THREE.PlaneGeometry(31,9.6),new THREE.MeshBasicMaterial({map:scoreboardTexture}));board.position.set(0,13,-68.4);scene.add(board);for(const x of [-13,13])cylinder(.4,10,GREEN,x,5,-69);
- function score(label,flash=false){boardCtx.fillStyle=flash?GOLD:'#10251d';boardCtx.fillRect(0,0,1536,640);boardCtx.strokeStyle=GOLD;boardCtx.lineWidth=10;boardCtx.strokeRect(12,12,1512,616);boardCtx.textAlign='center';boardCtx.fillStyle=flash?GREEN:GOLD;boardCtx.font='bold 64px Arial';boardCtx.fillText('RICARDO HAGUER',768,140);boardCtx.font='32px Arial';boardCtx.fillText('SOFTWARE & AUTOMATIZACIÓN',768,215);boardCtx.fillStyle=flash?GREEN:'#ffffff';boardCtx.font='bold 42px Arial';boardCtx.fillText(`${projects.length} REPOSITORIOS · 4 ÁREAS · INACAP`,768,345);boardCtx.font='40px Arial';boardCtx.fillText(label.toUpperCase(),768,485);boardCtx.font='24px Arial';boardCtx.fillText('DEL PROBLEMA A LA IMPLEMENTACIÓN',768,572);scoreboardTexture.needsUpdate=true}score('Bienvenido al campo');
+ function score(label,flash=false){
+   const ctx=boardCtx;
+   const background=ctx.createLinearGradient(0,0,1536,640);
+   background.addColorStop(0,flash?'#f3ad29':'#1e4938');
+   background.addColorStop(1,flash?'#d0891d':'#0a221b');
+   ctx.fillStyle=background;ctx.fillRect(0,0,1536,640);
+   ctx.fillStyle=flash?GREEN:GOLD;ctx.fillRect(53,50,11,478);
+   ctx.fillRect(1473,50,11,478);
+   ctx.textAlign='center';
+   ctx.fillStyle=flash?GREEN:'#fff9dc';
+   ctx.font='900 112px Arial';
+   ctx.fillText('RICARDO HAGUER',768,235,1310);
+   ctx.font='700 43px Arial';
+   ctx.fillText('SOFTWARE · DATOS · AUTOMATIZACIÓN',768,344,1300);
+   ctx.fillStyle=flash?GREEN:GOLD;
+   ctx.fillRect(578,393,380,10);
+   ctx.font='700 34px Arial';
+   ctx.fillText(label.toUpperCase(),768,492,1300);
+   ctx.fillStyle=flash?GREEN:'#c3d8c9';
+   ctx.font='600 29px Arial';
+   ctx.fillText(projects.length+' PROYECTOS · '+new Set(projects.map(p=>p.category)).size+' ÁREAS',768,559);
+   scoreboardTexture.needsUpdate=true;
+ }
+ score('Recorrido libre');
  // Flush numbered markers keep the receivers easy to find while leaving the field clear.
  const featured=projects.filter(p=>p.featured);
  for(const p of projects)if(featured.length<4&&!featured.includes(p))featured.push(p);
@@ -116,15 +144,14 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  const snowCount=320;
  const snowflakes=Array.from({length:snowCount},()=>({x:(Math.random()-.5)*90,y:Math.random()*35,z:(Math.random()-.5)*140}));
  const snow=instances(snowflakes,new THREE.OctahedronGeometry(.105),new THREE.MeshBasicMaterial({color:'#ffffff',transparent:true,opacity:.76,depthWrite:false}));
- snow.receiveShadow=false;snow.frustumCulled=false;snow.instanceMatrix.setUsage(THREE.DynamicDrawUsage);snow.visible=!reducedMotion;
+ snow.receiveShadow=false;snow.frustumCulled=false;snow.instanceMatrix.setUsage(THREE.DynamicDrawUsage);snow.visible=false;
  const confettiItems=Array.from({length:90},(_,i)=>({x:0,y:-5,z:0,color:i%2?GOLD:GREEN}));const confetti=instances(confettiItems,new THREE.BoxGeometry(.14,.25,.08),material('#ffffff'));const confettiVel=confettiItems.map(()=>new THREE.Vector3());let confettiTime=0;
  confetti.frustumCulled=false;confetti.receiveShadow=false;confetti.visible=false;
  let muted=true,audio=null,paused=false,hidden=false,current=null,lastInteraction='',zoneLock=null,flight=null,zoom=0,elapsed=0,celebration=null,mapOpen=false;
- let cameraYaw=.535,cameraPitch=.48;
- let inLocker=false, playerStun=0, defenderWarning=false;
- const savedPosition=new THREE.Vector3();
- let savedHeading=0;
- const hiddenAtRoom=[];
+ let cameraYaw=.065,cameraPitch=.28;
+ let playMode=false, inLocker=false, inTunnel=false, playerStun=0, defenderWarning=false;
+ let replay=null, ambience=null, assistedWalk=false;
+ const replayView=new THREE.Vector3(0,12,-41), replayLook=new THREE.Vector3(0,12.7,-69);
  const defense=createDefense(scene,()=>{
    playerStun=.8;
    motion.set(0,0);
@@ -136,39 +163,59 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
    }
    onStatus('Tackle. Vuelve a moverte para seguir la jugada.');
  });
- function visitLocker() {
-   if(inLocker)return;
-   savedPosition.copy(player.root.position);
-   savedHeading=player.root.rotation.y;
+ function stopMovement() {
+   assistedWalk=false;
    clearInput();
    motion.set(0,0);
    playerStun=0;
    if(flight){scene.remove(flight.ball);flight=null;player.recoverBall();player.throwTime=0;}
-   player.root.position.copy(lockerCenter).add(new THREE.Vector3(0,0,1.9));
-   player.root.rotation.y=0;
-   player.model.rotation.set(0,0,0);
-   inLocker=true;
+ }
+ function cueProject(project) {
+   if(reducedMotion||inTunnel||inLocker){onProject(project);return;}
+   if(replay)return;
+   stopMovement();
+   replay={project,remaining:.58};
+   score(project.title);
+ }
+ function guideToTunnel() {
+   if(inTunnel||inLocker)return;
+   stopMovement();
+   replay=null;
+   player.root.position.set(-30,0,tunnelZ);
+   player.root.rotation.y=-Math.PI/2;
+   cameraYaw=Math.PI/2;
+   cameraPitch=.25;
    mapOpen=false;
-   locker.visible=true;
-   for(const object of scene.children){
-     if(!object.visible||object===locker||object===player.root||object===playerShadow||object.isLight||object.name==='Cielo')continue;
-     hiddenAtRoom.push(object);
-     object.visible=false;
-   }
-   onRoom(true);
-   onZone('Camarín','Abre la tarjeta de contacto o vuelve al campo.','Abrir contacto');
+   lastInteraction='';
  }
  function leaveLocker() {
-   if(!inLocker)return;
-   player.root.position.copy(savedPosition);
+   stopMovement();
    inLocker=false;
-   locker.visible=false;
-   player.root.rotation.y=savedHeading;
-   for(const object of hiddenAtRoom)object.visible=true;
-   hiddenAtRoom.length=0;
-   lastInteraction='';
-   zoneLock=zones[6];
+   inTunnel=false;
+   player.root.position.set(-29.8,0,tunnelZ+5.2);
+   player.root.rotation.y=Math.PI/2;
+   cameraYaw=0;
+   cameraPitch=defaultPitch;
    onRoom(false);
+   updateAmbience();
+   lastInteraction='';
+ }
+ function movePlayer(pos, dt) {
+   const previousX=pos.x;
+   const previousZ=pos.z;
+   const x=pos.x+motion.x*dt;
+   const z=pos.z+motion.y*dt;
+   const channel=Math.abs(previousZ-tunnelZ)<3.15;
+   if (previousX<tunnelEnd) {
+     pos.x=THREE.MathUtils.clamp(x,-60.12,channel?-29: tunnelEnd-.23);
+     pos.z=THREE.MathUtils.clamp(z,tunnelZ-4.0,tunnelZ+4.0);
+   } else if (previousX<tunnelMouth || (x<tunnelMouth&&channel)) {
+     pos.x=THREE.MathUtils.clamp(x,-60.12,31);
+     pos.z=THREE.MathUtils.clamp(z,tunnelZ-3.14,tunnelZ+3.14);
+   } else {
+     pos.x=THREE.MathUtils.clamp(x,channel?tunnelMouth:-31.85,31);
+     pos.z=THREE.MathUtils.clamp(z,-60,60);
+   }
  }
  const defaultYaw=cameraYaw,defaultPitch=cameraPitch;
  const motion=new THREE.Vector2();
@@ -177,7 +224,7 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  nearMarker.rotation.x=-Math.PI/2;
  nearMarker.visible=false;
  scene.add(nearMarker);
- let mode='auto', detail=compact?'balanced':'high', snowEnabled=!reducedMotion;
+ let mode='auto', detail=compact?'balanced':'high', snowEnabled=false;
  let qualityTime=0, qualityFrames=0, slowWindows=0;
  const graphicsModes = ['light','balanced','high'];
  function syncSnow() {
@@ -186,12 +233,12 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  }
  function applyDetail(next) {
    detail=next;
-   const ratio=next==='light'?.80:next==='balanced'?1.04:1.52;
+   const ratio=next==='light'?.83:next==='balanced'?1.14:1.85;
    renderer.setPixelRatio(Math.min(devicePixelRatio,ratio));
    renderer.shadowMap.enabled=next!=='light';
    sun.castShadow=next!=='light';
    stands.setDetail(next);
-   turf.map.anisotropy=next==='high'?8:2;
+   turf.map.anisotropy=next==='high'?12:4;
    syncSnow();
    onQuality(next);
  }
@@ -214,7 +261,38 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
    qualityTime=qualityFrames=0;
  }
  const audioContext=window.AudioContext||window.webkitAudioContext;
- const key=new Set(),stick=new THREE.Vector2();const clearInput=()=>{key.clear();resetStick()};window.addEventListener('blur',clearInput);document.addEventListener('visibilitychange',()=>{hidden=document.hidden;if(hidden)clearInput()});
+ function updateAmbience() {
+   if (!ambience) return;
+   const volume=muted||hidden ? 0 : inLocker ? .005 : inTunnel ? .016 : .085;
+   ambience.gain.setTargetAtTime(volume,audio.currentTime,.25);
+   ambience.filter.frequency.setTargetAtTime(inLocker ? 185 : inTunnel ? 275 : 480,audio.currentTime,.3);
+ }
+ function startAmbience(){
+   if(!audioContext)return;
+   audio??=new audioContext();
+   audio.resume().catch(()=>{});
+   if(ambience)return;
+   const size=audio.sampleRate*3;
+   const buffer=audio.createBuffer(1,size,audio.sampleRate);
+   const samples=buffer.getChannelData(0);
+   let low=0;
+   for(let i=0;i<size;i++){
+     low=.94*low+.06*(Math.random()*2-1);
+     samples[i]=low;
+   }
+   const signal=audio.createBufferSource();
+   signal.buffer=buffer;
+   signal.loop=true;
+   const filter=audio.createBiquadFilter();
+   filter.type='lowpass';
+   const gain=audio.createGain();
+   gain.gain.value=0;
+   signal.connect(filter).connect(gain).connect(audio.destination);
+   signal.start();
+   ambience={gain:gain.gain,filter};
+   updateAmbience();
+ }
+ const key=new Set(),stick=new THREE.Vector2();const clearInput=()=>{key.clear();resetStick()};window.addEventListener('blur',clearInput);document.addEventListener('visibilitychange',()=>{hidden=document.hidden;if(hidden)clearInput();updateAmbience()});
  window.addEventListener('keydown',e=>{if(paused||e.altKey||e.ctrlKey||e.metaKey||e.target.closest?.('input,textarea,select,[contenteditable]')||(['Enter','Space'].includes(e.code)&&e.target.closest?.('button,a')))return;if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter'].includes(e.code))e.preventDefault();key.add(e.code);if(!e.repeat&&(e.code==='Space'||e.code==='Enter'))action(e.code==='Enter')});window.addEventListener('keyup',e=>key.delete(e.code));
  const joystick=document.getElementById('joystick'),knob=joystick.querySelector('i');let pointer=null;joystick.addEventListener('pointerdown',e=>{pointer=e.pointerId;joystick.setPointerCapture(pointer);updateStick(e)});joystick.addEventListener('pointermove',e=>{if(e.pointerId===pointer)updateStick(e)});function updateStick(e){const r=joystick.getBoundingClientRect();stick.set((e.clientX-r.left-r.width/2)/45,(e.clientY-r.top-r.height/2)/45);if(stick.length()>1)stick.normalize();knob.style.transform=`translate(${stick.x*35}px,${stick.y*35}px)`}function resetStick(){pointer=null;stick.set(0,0);knob.style.transform=''}joystick.addEventListener('pointerup',resetStick);joystick.addEventListener('pointercancel',resetStick);joystick.addEventListener('lostpointercapture',resetStick);
  function sound(){if(muted||!audioContext)return;audio??=new audioContext();audio.resume().catch(()=>{});[392,523.25,659.25,783.99].forEach((hz,i)=>{const o=audio.createOscillator(),g=audio.createGain();o.type='triangle';o.frequency.value=hz;g.gain.setValueAtTime(0,audio.currentTime+i*.12);g.gain.linearRampToValueAtTime(.1,audio.currentTime+i*.12+.015);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+i*.12+.38);o.connect(g);g.connect(audio.destination);o.start(audio.currentTime+i*.12);o.stop(audio.currentTime+i*.12+.4)})}
@@ -253,17 +331,21 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  }
 
  function action(enter=false) {
-   if(paused||celebration||flight||playerStun>0)return;
+   if(paused||celebration||replay||flight||playerStun>0)return;
    if(inLocker){onOpen('contact');return;}
+   if(inTunnel){assistedWalk=!assistedWalk;return;}
    if(current){
-     if(current.portal)touchdown(current);
-     else if(current.kind==='contact'){zoneLock=current;visitLocker();}
-     else{zoneLock=current;onOpen(current.kind);}
+     if(current.portal && playMode)touchdown(current);
+     else if(current.kind==='tunnel'){
+       cameraYaw=Math.PI/2;
+       assistedWalk=true;
+     } else {zoneLock=current;onOpen(current.kind);}
      return;
    }
    const target=receiverNear(player.root.position);
-   if(target&&enter)onProject(target.p);
-   else if(!enter)launch(target);
+   if(target && (enter||!playMode))cueProject(target.p);
+   else if(!enter && playMode)launch(target);
+   else if(!playMode)onOpen('all');
  }
  const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
  const clickTargets = new Map();
@@ -278,13 +360,15 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
    mouse.set((event.clientX-rect.left)/rect.width*2-1,1-(event.clientY-rect.top)/rect.height*2);
    ray.setFromCamera(mouse,camera);
    intersections.length = 0;
+   if (inLocker) return ray.intersectObject(lockerSign,false,intersections).length ? {contact:true} : null;
+   if (inTunnel) return null;
    ray.intersectObjects(clickMeshes, false, intersections);
    return clickTargets.get(intersections[0]?.object);
  }
  const canvas=renderer.domElement;
  let drag;
  canvas.addEventListener('pointerdown', event => {
-   if (paused || event.button !== 0 || drag) return;
+   if (paused || replay || event.button !== 0 || drag) return;
    drag={id:event.pointerId,x:event.clientX,y:event.clientY,distance:0};
    canvas.setPointerCapture(event.pointerId);
  });
@@ -309,45 +393,85 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
    const didDrag=drag?.id===event.pointerId&&drag.distance>6;
    drag=null;
    canvas.style.cursor='grab';
-   if(didDrag||paused||celebration||inLocker)return;
+   if(didDrag||paused||celebration||replay)return;
    const hit=pick(event);
-   if(hit?.zone){onOpen(hit.zone.kind);return;}
+   if(hit?.contact){onOpen('contact');return;}
+   if(hit?.zone){
+     if(hit.zone.kind==='tunnel')guideToTunnel();
+     else onOpen(hit.zone.kind);
+     return;
+   }
    if(!hit?.target)return;
    const target=hit.target;
-   if(Math.hypot(player.root.position.x-target.x, player.root.position.z-target.z)<10)launch(target);
-   else onProject(target.p);
+   if(playMode&&Math.hypot(player.root.position.x-target.x, player.root.position.z-target.z)<10)launch(target);
+   else cueProject(target.p);
  });
  function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)}window.addEventListener('resize',resize);
- const zero=new THREE.Vector2(),direction=new THREE.Vector2(),cameraOffset=new THREE.Vector3(),desired=new THREE.Vector3(),lookAt=new THREE.Vector3(-25,1,-4),lookTarget=new THREE.Vector3();
- let prev=performance.now();function frame(now){requestAnimationFrame(frame);const realDelta=(now-prev)/1000;const dt=THREE.MathUtils.clamp(realDelta,0,.04);prev=now;if(hidden||paused)return;measureQuality(realDelta);elapsed+=dt;const pos=player.root.position;playerStun=Math.max(0,playerStun-dt);let moving=0;const sprint=key.has('ShiftLeft')||key.has('ShiftRight');if(!inLocker&&!celebration&&!playerStun){const dx=(key.has('KeyD')||key.has('ArrowRight')?1:0)-(key.has('KeyA')||key.has('ArrowLeft')?1:0)+stick.x;const dz=(key.has('KeyS')||key.has('ArrowDown')?1:0)-(key.has('KeyW')||key.has('ArrowUp')?1:0)+stick.y;const dir=direction.set(dx,dz);if(dir.length()>1)dir.normalize();
- const viewYaw=mapOpen?0:cameraYaw;
- dir.rotateAround(zero,-viewYaw);
- motion.lerp(dir.multiplyScalar(sprint?14:8),1-Math.exp(-11*dt));
- if(motion.length()>.15){
-   pos.x=THREE.MathUtils.clamp(pos.x+motion.x*dt,-31,31);
-   pos.z=THREE.MathUtils.clamp(pos.z+motion.y*dt,-60,60);
-   const angle=Math.atan2(motion.x,motion.y);
-   if(!flight||flight.released)player.root.rotation.y+=Math.atan2(Math.sin(angle-player.root.rotation.y),Math.cos(angle-player.root.rotation.y))*(1-Math.exp(-14*dt));
-   moving=1;
+ const zero=new THREE.Vector2(),direction=new THREE.Vector2(),cameraOffset=new THREE.Vector3(),desired=new THREE.Vector3(),lookAt=new THREE.Vector3(),lookTarget=new THREE.Vector3();
+ let tunnelBlend=0;
+ let prev=performance.now();
+ function frame(now){
+ requestAnimationFrame(frame);
+ const realDelta=Math.max(0,(now-prev)/1000);
+ const dt=THREE.MathUtils.clamp(realDelta,0,.05);
+ prev=now;
+ if(hidden||paused)return;
+ measureQuality(realDelta);
+ elapsed+=dt;
+ const pos=player.root.position;
+ playerStun=Math.max(0,playerStun-dt);
+ let moving=0;
+ const sprint=(key.has('ShiftLeft')||key.has('ShiftRight'))&&!inTunnel&&!inLocker;
+ if(!celebration&&!replay&&!playerStun){
+   const dx=(key.has('KeyD')||key.has('ArrowRight')?1:0)-(key.has('KeyA')||key.has('ArrowLeft')?1:0)+stick.x;
+   const dz=(key.has('KeyS')||key.has('ArrowDown')?1:0)-(key.has('KeyW')||key.has('ArrowUp')?1:0)+stick.y;
+   const dir=direction.set(dx,dz);
+   if(dir.lengthSq()>.025)assistedWalk=false;
+   if(dir.length()>1)dir.normalize();
+   dir.rotateAround(zero,-(mapOpen?0:inTunnel||inLocker?Math.PI/2:cameraYaw));
+   if(assistedWalk){
+     dir.set((-55-pos.x)*.65,(tunnelZ-pos.z)*1.6).normalize();
+     if(pos.x<-54.8){
+       assistedWalk=false;
+       dir.set(0,0);
+     }
+   }
+   motion.lerp(dir.multiplyScalar(sprint?13:inLocker||inTunnel||assistedWalk?4.7:7.35),1-Math.exp(-12*dt));
+   if(motion.length()>.13){
+     movePlayer(pos,dt);
+     const angle=Math.atan2(motion.x,motion.y);
+     if(!flight||flight.released)player.root.rotation.y+=Math.atan2(Math.sin(angle-player.root.rotation.y),Math.cos(angle-player.root.rotation.y))*(1-Math.exp(-13*dt));
+     moving=motion.length()>.32;
+   }
  }
- let warning=defense.update(dt,pos,motion,Math.abs(pos.x)<26&&Math.abs(pos.z)<43,reducedMotion);
+ const enteredLocker=pos.x<tunnelEnd;
+ const enteredTunnel=!enteredLocker&&insideTunnel(pos);
+ const ambienceChanged=enteredLocker!==inLocker||enteredTunnel!==inTunnel;
+ if(enteredLocker!==inLocker)onRoom(enteredLocker);
+ if(enteredTunnel&&!inTunnel&&!inLocker)mapOpen=false;
+ inLocker=enteredLocker;
+ inTunnel=enteredTunnel;
+ if(ambienceChanged)updateAmbience();
+ const warning=defense.update(dt,pos,motion,playMode&&!replay&&!inLocker&&!inTunnel&&Math.abs(pos.x)<26&&Math.abs(pos.z)<43,reducedMotion);
  if(warning&&!defenderWarning&&!playerStun)onStatus('¡Defensor cerca! Cambia de dirección o acelera.');
  defenderWarning=warning;
- current=zones.find(z=>Math.hypot(pos.x-z.x,pos.z-z.z)<(z.portal?4.3:5));
+ current=inTunnel||inLocker?null:zones.find(z=>Math.hypot(pos.x-z.x,pos.z-z.z)<(z.portal?5:4));
  if(zoneLock&&Math.hypot(pos.x-zoneLock.x,pos.z-zoneLock.z)>7)zoneLock=null;
- const receiver=receiverNear(pos);
+ const receiver=inTunnel||inLocker?null:receiverNear(pos);
  const interaction=current||receiver;
- nearMarker.visible=!inLocker&&Boolean(interaction);
- if(interaction)nearMarker.position.set(interaction.x,.086,interaction.z);
- const actionText=current?.portal?'Ver proyectos':current?.kind==='contact'?'Ir al camarín':current?'Abrir panel':receiver?'Pasar al receptor':'Pasar';
- const label=current?.label||receiver?.p.title||'Centro del campo';
- const interactionKey=label+':'+actionText;
- if(interactionKey!==lastInteraction){
-   onZone(label,receiver&&!current?'Enter: abrir ficha · Espacio: pasar':current?'Enter: abrir · Espacio: acción':'Toca o haz clic en un portal o receptor',actionText);
-   score(interaction?label:'Explora los proyectos');
+ nearMarker.visible=Boolean(interaction && current?.kind!=='tunnel');
+ if(nearMarker.visible)nearMarker.position.set(interaction.x,.086,interaction.z);
+ const actionText=inLocker?'Abrir contacto':inTunnel?assistedWalk?'Detener avance':'Avanzar al camarín':current?.portal?'Ver proyectos':current?.kind==='tunnel'?'Entrar al túnel':current?'Abrir panel':receiver?playMode?'Pasar al receptor':'Abrir ficha':playMode?'Pasar':'Abrir proyectos';
+ const label=inLocker?'Camarín':inTunnel?'Túnel':'';
+ const zoneLabel=label||current?.label||receiver?.p.title||(playMode?'Jugada rápida':'Recorrido libre');
+ const interactionKey=zoneLabel+':'+actionText;
+ if(!replay&&interactionKey!==lastInteraction){
+   const hint=inLocker?'Toca la pantalla de Contacto o pulsa Enter.':inTunnel?'Avanza por el pasillo iluminado.':current?.kind==='tunnel'?'Cruza a pie o activa el avance guiado.':receiver&&playMode?'Enter abre la ficha. Espacio lanza el pase.':interaction?'Pulsa Enter o toca el destino.':'Explora el estadio o abre el catálogo.';
+   onZone(zoneLabel,hint,actionText);
+   score(zoneLabel);
    lastInteraction=interactionKey;
- }if(current?.portal&&current!==zoneLock&&!flight)touchdown(current);if(current?.kind==='profile'&&current!==zoneLock&&moving&&Math.hypot(pos.x-current.x,pos.z-current.z)<3){zoneLock=current;onOpen('profile')}if(current?.kind==='contact'&&current!==zoneLock&&pos.z>56&&!flight){zoneLock=current;visitLocker()}}
- if(inLocker)nearMarker.visible=false;
+ }
+ if(playMode&&!replay&&current?.portal&&current!==zoneLock&&!flight)touchdown(current);
  player.update(dt,moving,sprint);
  if(playerStun>0){
    const fall=Math.min(1,(.8-playerStun)*7,playerStun*4);
@@ -381,29 +505,62 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
        scene.remove(ball);
        player.recoverBall();
        flight=null;
-       if(target)onProject(target.p);
+       if(target)cueProject(target.p);
      }
    }
  }
  if(!inLocker&&confettiTime>0){confettiTime-=dt;confettiItems.forEach((p,i)=>{confettiVel[i].y-=12*dt;p.x+=confettiVel[i].x*dt;p.y+=confettiVel[i].y*dt;p.z+=confettiVel[i].z*dt;temp.position.set(p.x,p.y,p.z);temp.scale.set(1,1,1);temp.rotation.set(elapsed*i,0,elapsed*2);temp.updateMatrix();confetti.setMatrixAt(i,temp.matrix)});confetti.instanceMatrix.needsUpdate=true;confetti.visible=true}else confetti.visible=false;
  if(!inLocker&&snow.visible&&!paused){for(let i=0;i<snow.count;i++){const flake=snowflakes[i];flake.x+=.18*dt;flake.y-=2*dt;if(flake.y<0)flake.y=35;temp.position.set(flake.x,flake.y,flake.z);temp.scale.setScalar(i%5*.16+.6);temp.rotation.set(elapsed*.4,i,0);temp.updateMatrix();snow.setMatrixAt(i,temp.matrix)}snow.instanceMatrix.needsUpdate=true}
  zoom=Math.max(0,zoom-dt);
- const distance=zoom>0?.80:1;
- const radius=26*distance;
+ const radius=(compact?9.8:8.2)*(zoom>0?.83:1);
  cameraOffset.set(Math.sin(cameraYaw)*Math.cos(cameraPitch)*radius,
-   Math.sin(cameraPitch)*radius,Math.cos(cameraYaw)*Math.cos(cameraPitch)*radius);
- if(innerWidth<700)cameraOffset.multiplyScalar(1.22);
- if(inLocker){desired.copy(lockerCenter).add(new THREE.Vector3(5.2,4.1,9.65));lookTarget.copy(lockerCenter).add(new THREE.Vector3(0,1.6,-2.8));}
- else if(mapOpen){desired.set(Math.sin(cameraYaw-defaultYaw)*65,innerWidth<700?174:128,innerWidth<700?39:48);lookTarget.set(0,0,0);}
- else {desired.copy(pos).add(cameraOffset);lookTarget.set(pos.x,1.1,pos.z-3);}
- const blend=reducedMotion?1:1-Math.exp(-(inLocker?6:4.2)*dt);
+   Math.sin(cameraPitch)*radius+1.18,Math.cos(cameraYaw)*Math.cos(cameraPitch)*radius);
+ tunnelBlend=THREE.MathUtils.damp(tunnelBlend,inTunnel||inLocker?1:0,8,dt);
+ if(replay){
+   desired.copy(replayView);
+   lookTarget.copy(replayLook);
+ } else if(mapOpen){
+   desired.set(Math.sin(cameraYaw-defaultYaw)*65,innerWidth<700?174:128,innerWidth<700?39:48);
+   lookTarget.set(0,0,0);
+ } else {
+   desired.copy(pos).add(cameraOffset);
+   lookTarget.set(pos.x-3.9*Math.sin(cameraYaw),1.55,pos.z-3.9*Math.cos(cameraYaw));
+   if(tunnelBlend>.002){
+     desired.lerp(cameraOffset.set(pos.x+(inLocker?4.55:3.95),2.65,THREE.MathUtils.clamp(pos.z+.08,tunnelZ-2.92,tunnelZ+2.92)),tunnelBlend);
+     lookTarget.lerp(cameraOffset.set(pos.x-4.6,1.67,THREE.MathUtils.clamp(pos.z,tunnelZ-2.55,tunnelZ+2.55)),tunnelBlend);
+   }
+ }
+ const blend=reducedMotion?1:1-Math.exp(-6.1*dt);
+ if(elapsed===dt){camera.position.copy(desired);lookAt.copy(lookTarget);}
  camera.position.lerp(desired,blend);
  lookAt.lerp(lookTarget,blend);
  camera.lookAt(lookAt);
  renderer.render(scene,camera);
+ if(replay){
+   replay.remaining-=dt;
+   if(replay.remaining<=0){
+     const selected=replay.project;
+     replay=null;
+     onProject(selected);
+   }
+ }
  }
  applyDetail(detail);
  requestAnimationFrame(frame);
  const initialSnow=document.getElementById('snow');initialSnow.setAttribute('aria-pressed',snow.visible);initialSnow.textContent='Nieve: '+(snow.visible?'sí':'no');
- return{backend,action,setQuality,visitLocker,leaveLocker,get inLocker(){return inLocker},centerCamera(){cameraYaw=defaultYaw;cameraPitch=defaultPitch},toggleMap(){if(inLocker)return false;mapOpen=!mapOpen;return mapOpen},pause(value){paused=value;clearInput();motion.set(0,0);drag=null;},toggleSnow(){snowEnabled=!snowEnabled;syncSnow();return snowEnabled},toggleSound(){muted=!muted;if(!muted){if(audioContext){audio??=new audioContext();audio.resume().catch(()=>{})}}return !muted}};
+ return {
+   backend,action,setQuality,guideToTunnel,leaveLocker,
+   get inLocker(){return inLocker;},
+   togglePlayMode(){playMode=!playMode;return playMode;},
+   centerCamera(){cameraYaw=inTunnel||inLocker?Math.PI/2:defaultYaw;cameraPitch=defaultPitch;},
+   toggleMap(){if(inTunnel||inLocker)return false;mapOpen=!mapOpen;return mapOpen;},
+   pause(value){paused=value;clearInput();motion.set(0,0);drag=null;if(value)replay=null;},
+   toggleSnow(){snowEnabled=!snowEnabled;syncSnow();return snowEnabled;},
+   toggleSound(){
+     muted=!muted;
+     if(!muted)startAmbience();
+     updateAmbience();
+     return !muted;
+   },
+ };
 }

@@ -1,4 +1,24 @@
 import * as THREE from 'three';
+
+let fabric;
+function fabricTexture(){
+  if(fabric)return fabric;
+  const canvas=document.createElement('canvas');
+  canvas.width=canvas.height=64;
+  const context=canvas.getContext('2d');
+  context.fillStyle='#bdbdbd';
+  context.fillRect(0,0,64,64);
+  for(let i=0;i<64;i+=4){
+    for(let j=0;j<64;j+=4){
+      context.fillStyle=((i+j)%8===0)?'#8c8c8':'#dedede';
+      context.fillRect(i,j,1,2);
+    }
+  }
+  fabric=new THREE.CanvasTexture(canvas);
+  fabric.wrapS=fabric.wrapT=THREE.RepeatWrapping;
+  fabric.repeat.set(5,5);
+  return fabric;
+}
 export class PlayerAvatar{
  constructor({number='12',uniform='#203731',trim='#ffb612',carriesBall=true} = {}) {
    this.carriesBall = carriesBall;
@@ -17,8 +37,14 @@ export class PlayerAvatar{
    const white = makeMaterial('#f6f4e8');
    const skin = makeMaterial('#986344');
    const graphite = makeMaterial('#27373b', .39, .23);
-   const ballLeather = makeMaterial('#75452e', .86);
-   const oval = new THREE.SphereGeometry(1, 20, 14);
+   const ballLeather = makeMaterial('#75452e', .83);
+   const cloth = fabricTexture();
+   green.roughnessMap=cloth;
+   green.bumpMap=cloth;
+   green.bumpScale=.014;
+   ballLeather.bumpMap=cloth;
+   ballLeather.bumpScale=.011;
+   const oval = new THREE.SphereGeometry(1, carriesBall ? 26 : 16, carriesBall ? 18 : 11);
    function fit(parent, geometry, material, position, scale = [1, 1, 1]) {
      const mesh = new THREE.Mesh(geometry, material);
      mesh.position.set(...position);
@@ -31,7 +57,8 @@ export class PlayerAvatar{
      fit(parent, oval, material, [x, y, z], [w, h, d]);
    const model = this.model;
    shape(model, green, 0, 1.48, 0, .46, .41, .29);
-   shape(model, green, 0, 1.68, 0, .53, .24, .29);
+   shape(model, green, 0, 1.68, 0, .51, .245, .285);
+   shape(model, white, 0, 1.876, .02, .185, .043, .134);
    shape(model, green, 0, 1.23, 0, .34, .23, .24);
    shape(model, gold, 0, .92, 0, .35, .245, .24);
    shape(model, skin, 0, 1.99, .03, .13, .14, .12);
@@ -66,7 +93,8 @@ export class PlayerAvatar{
      const arm = new THREE.Group();
      arm.position.set(side * .47, 1.72, 0);
      model.add(arm);
-     shape(arm, green, side * .027, -.035, 0, .195, .215, .22);
+     shape(arm, green, side * .027, -.035, 0, .198, .195, .22);
+     shape(arm, green, side * .039, -.026, -.035, .194, .18, .18);
      shape(arm, green, side * .035, -.207, 0, .151, .20, .157);
      const sleeve = new THREE.CylinderGeometry(.145, .137, .048, 16);
      fit(arm, sleeve, gold, [side * .035, -.275, 0]);
@@ -74,7 +102,8 @@ export class PlayerAvatar{
      const elbow = new THREE.Group();
      elbow.position.set(side * .032, -.37, .009);
      arm.add(elbow);
-     shape(elbow, skin, 0, -.112, 0, .099, .165, .103);
+     shape(elbow, white, 0, -.086, 0, .101, .129, .105);
+     shape(elbow, skin, 0, -.168, 0, .085, .094, .084);
      shape(elbow, white, 0, -.255, 0, .093, .113, .09);
      this.arms.push(arm);
      this.elbows.push(elbow);
@@ -83,7 +112,8 @@ export class PlayerAvatar{
      leg.position.set(side * .18, .88, .002);
      model.add(leg);
      shape(leg, gold, 0, -.223, 0, .158, .285, .181);
-     shape(leg, green, side * .145, -.205, 0, .024, .233, .062);
+     shape(leg, green, side * .147, -.205, 0, .023, .222, .064);
+     shape(leg, white, side * .152, -.205, 0, .018, .208, .014);
      const knee = new THREE.Group();
      knee.position.y = -.43;
      leg.add(knee);
@@ -96,16 +126,16 @@ export class PlayerAvatar{
    }
 
    const canvas = document.createElement('canvas');
-   canvas.width = canvas.height = 128;
+   canvas.width = canvas.height = 256;
    const context = canvas.getContext('2d');
    context.textAlign = 'center';
    context.textBaseline = 'middle';
-   context.font = 'bold 98px Arial';
-   context.lineWidth = 5;
+   context.font = '900 192px Arial';
+   context.lineWidth = 7;
    context.strokeStyle = '#ffb612';
-   context.strokeText(number, 64, 66);
+   context.strokeText(number, 128, 133);
    context.fillStyle = carriesBall ? 'white' : '#182b38';
-   context.fillText(number, 64, 66);
+   context.fillText(number, 128, 133);
    const jerseyNumber = new THREE.CanvasTexture(canvas);
    jerseyNumber.colorSpace = THREE.SRGBColorSpace;
    const jersey = new THREE.MeshBasicMaterial({ map: jerseyNumber, transparent: true, depthWrite: false });
@@ -128,7 +158,7 @@ export class PlayerAvatar{
  async loadOptional(){const modelPath=import.meta.env.DEV?'public/models/packer-player.glb':'models/packer-player.glb';const url=new URL(modelPath,document.baseURI);try{const response=await fetch(url,{method:'HEAD'});if(!response.ok||response.headers.get('content-type')?.includes('text/html'))return;const {GLTFLoader}=await import('three/addons/loaders/GLTFLoader.js');const gltf=await new GLTFLoader().loadAsync(url.href);const bounds=new THREE.Box3().setFromObject(gltf.scene);const size=bounds.getSize(new THREE.Vector3());gltf.scene.scale.setScalar(2.6/Math.max(size.y,.01));gltf.scene.position.y=-bounds.min.y*gltf.scene.scale.y;this.root.add(gltf.scene);this.model.visible=false;this.mixer=new THREE.AnimationMixer(gltf.scene);this.actions={};for(const clip of gltf.animations)this.actions[clip.name.toLowerCase()]=this.mixer.clipAction(clip);this.external=gltf.scene;}catch{/* Procedural avatar remains available. */}}
  update(dt, speed, sprint) {
    this.motion = THREE.MathUtils.damp(this.motion, speed ? 1 : 0, 12, dt);
-   this.phase += dt * (sprint ? 16 : 10);
+   this.phase += dt * THREE.MathUtils.lerp(2,sprint ? 15 : 11,this.motion);
    this.throwTime = Math.max(0, this.throwTime - dt);
    this.celebrateTime = Math.max(0, this.celebrateTime - dt);
    const stride = Math.sin(this.phase) * .68 * this.motion;
