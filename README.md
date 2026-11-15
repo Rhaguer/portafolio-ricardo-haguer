@@ -22,7 +22,8 @@ Las dos vistas usan `dist/projects.json`, el catálogo editorial preexistente. C
 - Proyectos abre el catálogo desde la portada o la cancha. Cada ficha admite un enlace compartible con el fragmento `#proyecto/<repositorio>`.
 - WASD, flechas o joystick para moverse. Arrastrar para girar la cámara. Enter abre un destino. Esc cierra los paneles.
 - En Recorrido libre se pueden abrir proyectos y cruzar a pie el túnel al camarín. Contacto lleva a la entrada del túnel desde la cancha. En la vista clásica abre el contacto directamente.
-- Activa Jugada rápida en el menú para lanzar con Espacio y esquivar a los defensores. El sonido y la nieve empiezan apagados. La calidad gráfica se ajusta automáticamente.
+- Las etiquetas numeradas y el menú Destacados en el campo abren las fichas sin necesidad de llegar a una marca.
+- Activa Jugada rápida para lanzar al compañero #87 con Espacio o con el botón de pase y esquivar a los defensores. La cámara se acerca temporalmente cuando el túnel, el camarín o la estructura del estadio limitan su distancia. El sonido y la nieve empiezan apagados. La calidad gráfica se ajusta automáticamente.
 
 ## Avatar externo opcional
 
