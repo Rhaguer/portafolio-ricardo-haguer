@@ -23,7 +23,7 @@ Las dos vistas usan `dist/projects.json`, el catálogo editorial preexistente. C
 - WASD, flechas o joystick para moverse. Arrastrar para girar la cámara. Enter abre un destino. Esc cierra los paneles.
 - En Recorrido libre se pueden abrir proyectos y cruzar a pie el túnel al camarín. Contacto lleva a la entrada del túnel desde la cancha. En la vista clásica abre el contacto directamente.
 - Las etiquetas numeradas y el menú Destacados en el campo abren las fichas sin necesidad de llegar a una marca.
-- Activa Jugada rápida para lanzar al compañero #87 con Espacio o con el botón de pase y esquivar a los defensores. La cámara se acerca temporalmente cuando el túnel, el camarín o la estructura del estadio limitan su distancia. El sonido y la nieve empiezan apagados. La calidad gráfica se ajusta automáticamente.
+- Activa Jugada rápida para lanzar con Espacio o con el botón de pase y esquivar a los defensores. Tras la recepción, el control y la cámara siguen al portador. Cruza una línea de gol con el balón para anotar 6. En rango, usa K o Patear para activar la mira y vuelve a pulsar al centrarla. Un gol de campo suma 3. Después de un touchdown puedes patear por 1, intentar otro cruce por 2 o saltar la conversión. La cámara se acerca temporalmente cuando el túnel, el camarín o la estructura del estadio limitan su distancia. El sonido y la nieve empiezan apagados. La calidad gráfica se ajusta automáticamente.
 
 ## Avatar externo opcional
 
