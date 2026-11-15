@@ -1,6 +1,6 @@
 <!doctype html><html lang="es-CL"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#203731"><meta name="description" content="Ricardo Haguer. Software, datos y automatización. Explora 13 proyectos documentados en un estadio 3D interactivo o en la vista clásica accesible."><title>Ricardo Haguer — El campo de las ideas</title><link rel="icon" href="./logo-rihm.webp"><link rel="stylesheet" href="/src/style.css"></head><body>
 <a class="skip" href="./classic.html#proyectos">Ir a los proyectos</a><div id="world" role="region" aria-label="Campo de juego. Usa las flechas o WASD para moverte, Espacio para pasar y Enter para abrir una zona." tabindex="-1"></div>
-<header class="hud"><a class="identity" href="./classic.html"><img src="./logo-rihm.webp" alt="Logotipo RIHM"><span>RICARDO HAGUER<small>SOFTWARE & AUTOMATIZACIÓN</small></span></a><div class="hud-actions"><button type="button" data-open="all" class="hud-projects">Proyectos</button><button id="snow" aria-pressed="true" disabled>Nieve: sí</button><button id="sound" aria-pressed="false" disabled>Sonido: no</button><a href="./classic.html">Vista Clásica ↗</a></div></header>
+<header class="hud"><a class="identity" href="./classic.html"><img src="./logo-rihm.webp" alt="Logotipo RIHM"><span>RICARDO HAGUER<small>SOFTWARE & AUTOMATIZACIÓN</small></span></a><div class="hud-actions"><button type="button" data-open="all" class="hud-projects">Proyectos</button><button type="button" data-open="contact" id="contact-entry">Contacto</button><button type="button" id="game-menu" hidden>Menú</button><a href="./classic.html">Vista Clásica ↗</a></div></header>
 <main id="welcome" class="welcome">
   <div class="welcome-copy">
     <p class="eyebrow">SANTIAGO, CHILE · PORTAFOLIO</p>
@@ -20,5 +20,26 @@
     <div id="home-projects" class="home-projects"></div>
   </section>
 </main>
-<aside id="play-hud" hidden><div class="location"><span>JUGADA ACTUAL</span><strong id="zone-label">Túnel · Perfil profesional</strong><small id="hint">WASD / Flechas para explorar</small><div class="graphics-controls"><small id="graphics"></small><label for="quality">Gráficos</label><select id="quality"><option value="auto">Auto</option><option value="high">Alta</option><option value="light">Ligera</option></select></div></div><nav class="quick" aria-label="Acceso directo al contenido"><button data-open="profile">Perfil</button><button data-open="skills">Método</button><button data-open="contact">Contacto</button><button type="button" data-tour>Recorrido</button><button id="map" aria-pressed="false">Mapa</button><button id="camera-center">Centrar cámara</button></nav><div class="bottom-hud"><span>WASD mover · Arrastra para mirar · Espacio: acción</span><button id="interact" class="primary">ABRIR ZONA ↗</button></div><p id="touch-hint">Arrastra el campo para girar la cámara</p><div id="joystick" aria-label="Joystick de movimiento"><i></i></div><button id="touch-action" class="primary">Pasar</button></aside>
+<aside id="play-hud" hidden aria-label="Controles del estadio">
+  <div class="location"><strong id="zone-label">Centro del campo</strong><small id="hint"></small></div>
+  <button type="button" id="leave-room" class="secondary" hidden>Volver al campo</button>
+  <div class="bottom-hud"><span>WASD para moverte · Arrastra para mirar · Espacio para actuar</span><button id="interact" class="primary">Pasar</button></div>
+  <div id="joystick" aria-label="Joystick de movimiento"><i></i></div>
+  <button id="touch-action" class="primary">Pasar</button>
+  <p id="game-status" role="status" aria-live="polite"></p>
+</aside>
+<dialog id="pause-menu" aria-labelledby="pause-title">
+  <form method="dialog"><button class="menu-close" aria-label="Cerrar menú">×</button></form>
+  <h2 id="pause-title">Menú del estadio</h2>
+  <div class="pause-options">
+    <button type="button" id="map" aria-pressed="false">Mapa aéreo</button>
+    <button type="button" id="camera-center">Centrar cámara</button>
+    <button type="button" id="snow" aria-pressed="true">Nieve: sí</button>
+    <button type="button" id="sound" aria-pressed="false">Sonido: no</button>
+    <button type="button" data-pause-open="profile">Perfil</button>
+    <button type="button" data-pause-open="skills">Método</button>
+    <button type="button" data-pause-open="contact">Ir al camarín</button>
+    <button type="button" id="pause-tour">Recorrido guiado</button>
+  </div>
+</dialog>
 <dialog id="panel" aria-labelledby="panel-title"><button id="close" aria-label="Cerrar panel" autofocus>×</button><div id="panel-content"></div></dialog><div id="announcement" role="status" aria-live="polite"></div><noscript><p>La experiencia 3D necesita JavaScript. <a href="./classic.html">Consultar perfil y proyectos en Vista Clásica</a>.</p></noscript><script type="module" src="/src/main.js"></script></body></html>
