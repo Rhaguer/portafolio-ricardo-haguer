@@ -5,3 +5,15 @@
 @media(max-width:450px){.project-grid{grid-template-columns:1fr}.card-media img{aspect-ratio:640/350}.card-bottom{flex-wrap:nowrap}.hero-proof{gap:15px}.hero-proof>span{padding-right:15px}.hero-actions{gap:10px}.button{font-size:12px;padding:12px 16px;gap:20px}.hero-board .board-center{height:260px}.tag-web{left:15px}.tag-data{left:15px}.tag-auto{right:12px}.board-tag b{font-size:9px}.board-tag{padding:10px}.core{height:104px;width:104px}.core small{font-size:4px}.brand small{font-size:5.5px}.filters{gap:1px}.filter{padding:8px;font-size:9px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{transition:none!important;animation:none!important}}
 @media print{header,nav,.hero-board,.hero-actions,.hero-proof,.capability-strip,.project-tools,.card-media,.detail-button,.catalog-note,.approach,.contact-actions,footer,dialog,.skip{display:none!important}.shell{width:100%}.hero{display:block;padding:15px 0}.hero h1{font-size:30px;color:#142c40}.hero h1 br{display:none}.hero-intro{font-size:13px;margin:12px 0}.hero-detail{font-size:11px}.projects{padding:15px 0}.project-grid{display:block}.project-card{border:0;border-bottom:1px solid #ddd;border-radius:0;break-inside:avoid;margin-bottom:8px}.card-body{padding:8px 0}.card-description{font-size:10px;margin:5px 0}.project-card h3{font-size:14px}.card-bottom{border:0;padding:0}.tags{margin:6px 0}.profile{background:white;color:#142c40;padding:15px 0}.profile-layout{display:block}.profile p:not(.eyebrow),.profile-lead{color:#333!important;font-size:11px!important}.profile .eyebrow{color:#176e68}.profile h2{font-size:24px}.expertise article{padding:8px 0}.expertise h3{font-size:12px}.expertise article>span{color:#176e68}.contact{padding:10px 0}.contact h2{font-size:22px}.contact>div>p{font-size:11px}.section-heading h2{font-size:24px}.section-heading .text-link{display:none}body{font-size:11px}h2,h3{break-after:avoid}.project-card.hidden-print{display:block!important}}
+@media(max-width:350px) {
+  .nav { gap:6px; }
+  .nav .brand { min-width:0; gap:5px; }
+  .nav .brand img { width:38px; height:38px; }
+  .nav .brand small { display:none; }
+  .nav nav { gap:9px; }
+  .shell { width:calc(100% - 26px); }
+  .hero h1 { font-size:clamp(30px,11vw,40px); overflow-wrap:anywhere; }
+  .board-tag { max-width:50%; white-space:normal; }
+  .card-bottom { flex-wrap:wrap; }
+  dialog { max-width:calc(100vw - 18px); overflow-wrap:anywhere; }
+}
