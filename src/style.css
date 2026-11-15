@@ -184,3 +184,8 @@ button, .hud-actions a { min-height: 42px; }
 
 .renderer-status { display:flex; flex-wrap:wrap; gap:7px 14px; border-top:1px solid #76988566; margin:16px 0 2px; padding:10px 0 0; font:600 .73rem ui-monospace,monospace; }
 .renderer-status span:first-child { color:#926318; }
+.replay-panel .case-stack { background:transparent; border-radius:0; }
+.replay-panel .case-footer a { width:100%; padding:10px 12px; }
+.replay-panel .share-project { width:100%; }
+.replay-panel { color-scheme:dark; }
+.replay-media img[src*="balanza-editorial"] { object-fit:cover; }
