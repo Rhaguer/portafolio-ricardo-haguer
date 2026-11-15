@@ -1,15 +1,168 @@
 import * as THREE from 'three';
-import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 export class PlayerAvatar{
- constructor(){this.root=new THREE.Group();this.model=new THREE.Group();this.root.add(this.model);this.phase=0;this.throwTime=0;this.celebrateTime=0;const mat=c=>new THREE.MeshStandardMaterial({color:c,roughness:.8});const green=mat('#203731'),gold=mat('#FFB612'),white=mat('#ffffff'),skin=mat('#aa7353');const box=(w,h,d,m,x,y,z,parent=this.model)=>{const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);mesh.position.set(x,y,z);mesh.castShadow=true;parent.add(mesh);return mesh};
- box(.9,.88,.48,green,0,1.45,0);box(1.15,.23,.54,green,0,1.85,0);box(.75,.32,.45,gold,0,.87,0);
- const head=new THREE.Mesh(new THREE.SphereGeometry(.37,16,12),gold);head.position.y=2.23;head.scale.z=1.08;head.castShadow=true;this.model.add(head);box(.09,.65,.71,white,0,2.25,0);box(.045,.68,.73,green,0,2.25,0);box(.5,.1,.1,green,0,2.16,.37);box(.55,.06,.12,green,0,2.02,.42);for(const x of [-.23,.23])box(.05,.26,.05,green,x,2.1,.43);
- this.arms=[];this.legs=[];for(const side of [-1,1]){let arm=new THREE.Group();arm.position.set(side*.64,1.78,0);this.model.add(arm);box(.28,.5,.3,green,0,-.2,0,arm);box(.29,.08,.31,gold,0,-.28,0,arm);box(.22,.32,.24,skin,0,-.6,0,arm);this.arms.push(arm);let leg=new THREE.Group();leg.position.set(side*.23,.85,0);this.model.add(leg);box(.3,.53,.35,gold,0,-.25,0,leg);box(.04,.5,.36,green,side*.14,-.25,0,leg);box(.25,.28,.27,green,0,-.62,0,leg);box(.28,.17,.45,white,0,-.81,.08,leg);this.legs.push(leg)}
- const c=document.createElement('canvas');c.width=128;c.height=128;const cx=c.getContext('2d');cx.clearRect(0,0,128,128);cx.textAlign='center';cx.textBaseline='middle';cx.font='bold 98px Arial';cx.lineWidth=5;cx.strokeStyle='#ffb612';cx.strokeText('12',64,66);cx.fillStyle='white';cx.fillText('12',64,66);const jersey=new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),transparent:true});for(const z of [-.247,.247]){const n=new THREE.Mesh(new THREE.PlaneGeometry(.64,.6),jersey);n.position.set(0,1.47,z);if(z<0)n.rotation.y=Math.PI;this.model.add(n)}
- this.ball=new THREE.Mesh(new THREE.SphereGeometry(.17,12,8),mat('#6B3E26'));this.ball.scale.set(1,1,1.8);this.ball.position.set(.7,1.2,.25);this.model.add(this.ball);const seam=box(.035,.025,.35,white,.7,1.36,.25);this.seam=seam;
+ constructor() {
+   this.root = new THREE.Group();
+   this.model = new THREE.Group();
+   this.root.add(this.model);
+   this.phase = 0;
+   this.throwTime = 0;
+   this.celebrateTime = 0;
+
+   const makeMaterial = (color, roughness = .78, metalness = 0) =>
+     new THREE.MeshStandardMaterial({ color, roughness, metalness });
+   const green = makeMaterial('#203731');
+   const gold = makeMaterial('#ffb612', .43, .09);
+   const white = makeMaterial('#f6f4e8');
+   const skin = makeMaterial('#986344');
+   const graphite = makeMaterial('#27373b', .39, .23);
+   const ballLeather = makeMaterial('#75452e', .86);
+   const oval = new THREE.SphereGeometry(1, 20, 14);
+   function fit(parent, geometry, material, position, scale = [1, 1, 1]) {
+     const mesh = new THREE.Mesh(geometry, material);
+     mesh.position.set(...position);
+     mesh.scale.set(...scale);
+     mesh.castShadow = true;
+     parent.add(mesh);
+     return mesh;
+   }
+   const shape = (parent, material, x, y, z, w, h, d) =>
+     fit(parent, oval, material, [x, y, z], [w, h, d]);
+   const model = this.model;
+   shape(model, green, 0, 1.48, 0, .46, .41, .29);
+   shape(model, green, 0, 1.68, 0, .53, .24, .29);
+   shape(model, green, 0, 1.23, 0, .34, .23, .24);
+   shape(model, gold, 0, .92, 0, .35, .245, .24);
+   shape(model, skin, 0, 1.99, .03, .13, .14, .12);
+   shape(model, graphite, 0, 2.2, .025, .345, .34, .355);
+   shape(model, skin, 0, 2.13, .20, .25, .26, .20);
+
+   const helmetShell = new THREE.SphereGeometry(.39, 32, 22, 0, Math.PI * 2, 0, Math.PI * .69);
+   fit(model, helmetShell, gold, [0, 2.24, -.035], [1, 1, 1.15]);
+   for (const [width, material] of [[.31, white], [.13, green]]) {
+     const stripe = new THREE.SphereGeometry(.396, 10, 20, Math.PI * .5 - width / 2, width, .17, Math.PI * .635);
+     fit(model, stripe, material, [0, 2.241, -.035], [1, 1, 1.15]);
+   }
+   const visor = new THREE.SphereGeometry(.362, 20, 10, Math.PI * .22, Math.PI * .56, 1.26, .43);
+   fit(model, visor, makeMaterial('#334f4d', .31, .24), [0, 2.245, -.012], [1.02, .91, 1.14]);
+   const tube = (points, radius, material, parent = model) => {
+     const curve = new THREE.CatmullRomCurve3(points.map(p => new THREE.Vector3(...p)));
+     return fit(parent, new THREE.TubeGeometry(curve, 14, radius, 6), material, [0, 0, 0]);
+   };
+   for (const height of [2.015, 2.11]) {
+     tube([[-.33,2.19,.12],[-.32,height,.31],[-.17,height-.02,.43],[.17,height-.02,.43],[.32,height,.31],[.33,2.19,.12]], .024, graphite);
+   }
+   for (const side of [-1, 1]) {
+     shape(model, gold, side * .335, 2.14, .018, .059, .16, .164);
+     tube([[side*.17,2.016,.43],[side*.18,2.14,.424],[side*.20,2.22,.348]], .018, graphite);
+   }
+
+   this.arms = [];
+   this.elbows = [];
+   this.legs = [];
+   this.knees = [];
+   for (const side of [-1, 1]) {
+     const arm = new THREE.Group();
+     arm.position.set(side * .47, 1.72, 0);
+     model.add(arm);
+     shape(arm, green, side * .027, -.035, 0, .195, .215, .22);
+     shape(arm, green, side * .035, -.207, 0, .151, .20, .157);
+     const sleeve = new THREE.CylinderGeometry(.145, .137, .048, 16);
+     fit(arm, sleeve, gold, [side * .035, -.275, 0]);
+     fit(arm, sleeve, white, [side * .035, -.325, 0], [.96, .55, .96]);
+     const elbow = new THREE.Group();
+     elbow.position.set(side * .032, -.37, .009);
+     arm.add(elbow);
+     shape(elbow, skin, 0, -.112, 0, .099, .165, .103);
+     shape(elbow, white, 0, -.255, 0, .093, .113, .09);
+     this.arms.push(arm);
+     this.elbows.push(elbow);
+
+     const leg = new THREE.Group();
+     leg.position.set(side * .18, .88, .002);
+     model.add(leg);
+     shape(leg, gold, 0, -.223, 0, .158, .285, .181);
+     shape(leg, green, side * .145, -.205, 0, .024, .233, .062);
+     const knee = new THREE.Group();
+     knee.position.y = -.43;
+     leg.add(knee);
+     shape(knee, gold, 0, 0, .045, .125, .12, .135);
+     shape(knee, green, 0, -.195, 0, .107, .211, .12);
+     shape(knee, graphite, 0, -.383, .046, .125, .066, .204);
+     shape(knee, white, 0, -.355, .056, .12, .072, .196);
+     this.legs.push(leg);
+     this.knees.push(knee);
+   }
+
+   const canvas = document.createElement('canvas');
+   canvas.width = canvas.height = 128;
+   const context = canvas.getContext('2d');
+   context.textAlign = 'center';
+   context.textBaseline = 'middle';
+   context.font = 'bold 98px Arial';
+   context.lineWidth = 5;
+   context.strokeStyle = '#ffb612';
+   context.strokeText('12', 64, 66);
+   context.fillStyle = 'white';
+   context.fillText('12', 64, 66);
+   const number = new THREE.CanvasTexture(canvas);
+   number.colorSpace = THREE.SRGBColorSpace;
+   const jersey = new THREE.MeshBasicMaterial({ map: number, transparent: true, depthWrite: false });
+   for (const side of [-1, 1]) {
+     const decal = fit(model, new THREE.PlaneGeometry(.56, .5), jersey, [0, 1.53, side * .297]);
+     decal.rotation.y = side < 0 ? Math.PI : 0;
+     decal.castShadow = false;
+   }
+
+   this.ball = new THREE.Group();
+   this.ball.position.set(.045, -.18, .168);
+   this.ball.rotation.z = -.38;
+   this.elbows[1].add(this.ball);
+   shape(this.ball, ballLeather, 0, 0, 0, .15, .243, .15);
+   for (let i = -2; i <= 2; i++) {
+     tube([[-.035,i*.032,.143],[0,i*.032,.153],[.035,i*.032,.143]], .007, white, this.ball);
+   }
  }
- async loadOptional(){const modelPath=import.meta.env.DEV?'public/models/packer-player.glb':'models/packer-player.glb';const url=new URL(modelPath,document.baseURI);try{const response=await fetch(url,{method:'HEAD'});if(!response.ok||response.headers.get('content-type')?.includes('text/html'))return;const gltf=await new GLTFLoader().loadAsync(url.href);const bounds=new THREE.Box3().setFromObject(gltf.scene);const size=bounds.getSize(new THREE.Vector3());gltf.scene.scale.setScalar(2.6/Math.max(size.y,.01));gltf.scene.position.y=-bounds.min.y*gltf.scene.scale.y;this.root.add(gltf.scene);this.model.visible=false;this.mixer=new THREE.AnimationMixer(gltf.scene);this.actions={};for(const clip of gltf.animations)this.actions[clip.name.toLowerCase()]=this.mixer.clipAction(clip);this.external=gltf.scene;}catch{/* Procedural avatar remains available. */}}
- update(dt,speed,sprint){this.phase+=dt*(sprint?16:10);this.throwTime=Math.max(0,this.throwTime-dt);this.celebrateTime=Math.max(0,this.celebrateTime-dt);const stride=speed?Math.sin(this.phase)*.65:Math.sin(this.phase*.3)*.035;this.legs[0].rotation.x=stride;this.legs[1].rotation.x=-stride;this.arms[0].rotation.x=-stride;this.arms[1].rotation.x=stride;this.model.position.y=speed?Math.abs(Math.sin(this.phase))*.07:Math.sin(this.phase*.3)*.018;if(this.throwTime)this.arms[1].rotation.x=-2.2*Math.sin(this.throwTime*4);if(this.celebrateTime){this.arms.forEach((a,i)=>{a.rotation.z=(i?1:-1)*2.6});this.model.position.y=Math.abs(Math.sin(this.celebrateTime*8))*.55}else this.arms.forEach(a=>a.rotation.z=0);if(this.mixer){const key=this.celebrateTime?'celebration':this.throwTime?'throw':speed?(sprint?'sprint':'run'):'idle';const action=this.actions[key]||this.actions[speed?'run':'idle'];if(action&&action!==this.current){this.current?.fadeOut(.2);action.reset().fadeIn(.2).play();this.current=action}this.mixer.update(dt)}}
- throw(){this.throwTime=.7;this.ball.visible=false;this.seam.visible=false;setTimeout(()=>{this.ball.visible=true;this.seam.visible=true},1000)}
- celebrate(){this.celebrateTime=1.6}
+ async loadOptional(){const modelPath=import.meta.env.DEV?'public/models/packer-player.glb':'models/packer-player.glb';const url=new URL(modelPath,document.baseURI);try{const response=await fetch(url,{method:'HEAD'});if(!response.ok||response.headers.get('content-type')?.includes('text/html'))return;const {GLTFLoader}=await import('three/addons/loaders/GLTFLoader.js');const gltf=await new GLTFLoader().loadAsync(url.href);const bounds=new THREE.Box3().setFromObject(gltf.scene);const size=bounds.getSize(new THREE.Vector3());gltf.scene.scale.setScalar(2.6/Math.max(size.y,.01));gltf.scene.position.y=-bounds.min.y*gltf.scene.scale.y;this.root.add(gltf.scene);this.model.visible=false;this.mixer=new THREE.AnimationMixer(gltf.scene);this.actions={};for(const clip of gltf.animations)this.actions[clip.name.toLowerCase()]=this.mixer.clipAction(clip);this.external=gltf.scene;}catch{/* Procedural avatar remains available. */}}
+ update(dt, speed, sprint) {
+   this.phase += dt * (sprint ? 16 : 10);
+   this.throwTime = Math.max(0, this.throwTime - dt);
+   this.celebrateTime = Math.max(0, this.celebrateTime - dt);
+   const stride = speed ? Math.sin(this.phase) * .65 : Math.sin(this.phase * .3) * .03;
+   this.model.rotation.x = speed ? (sprint ? .17 : .11) : 0;
+   this.model.position.y = speed ? Math.abs(Math.sin(this.phase)) * .07 : Math.sin(this.phase * .3) * .012;
+   for (let i = 0; i < 2; i++) {
+     const side = i === 0 ? -1 : 1;
+     this.legs[i].rotation.x = -side * stride;
+     this.knees[i].rotation.x = .06 + Math.max(0, side * stride) * (sprint ? 1.25 : 1.02);
+     this.arms[i].rotation.x = side * stride * (i === 1 ? .58 : .9);
+     this.arms[i].rotation.z = side * .12;
+     this.elbows[i].rotation.x = i === 1 ? -.79 : -.22 - Math.abs(stride) * .35;
+     if (this.celebrateTime) {
+       this.arms[i].rotation.z = side * 2.55;
+       this.elbows[i].rotation.x = -.16;
+       this.model.position.y = Math.abs(Math.sin(this.celebrateTime * 8)) * .52;
+     }
+   }
+   if (this.throwTime) {
+     this.arms[1].rotation.x = -2.35 * Math.sin(this.throwTime * 4);
+     this.elbows[1].rotation.x = -.30;
+   }
+   if (this.mixer) {
+     const key = this.celebrateTime ? 'celebration' : this.throwTime ? 'throw'
+       : speed ? (sprint ? 'sprint' : 'run') : 'idle';
+     const action = this.actions[key] || this.actions[speed ? 'run' : 'idle'];
+     if (action && action !== this.current) {
+       this.current?.fadeOut(.2);
+       action.reset().fadeIn(.2).play();
+       this.current = action;
+     }
+     this.mixer.update(dt);
+   }
+ }
+ throw() {
+   this.throwTime = .7;
+   this.ball.visible = false;
+   setTimeout(() => { this.ball.visible = true; }, 1000);
+ }
+ celebrate() { this.celebrateTime = 1.6; }
 }
