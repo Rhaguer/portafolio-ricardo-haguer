@@ -7,6 +7,7 @@ export class PlayerAvatar{
    this.phase = 0;
    this.throwTime = 0;
    this.celebrateTime = 0;
+   this.motion = 0;
 
    const makeMaterial = (color, roughness = .78, metalness = 0) =>
      new THREE.MeshStandardMaterial({ color, roughness, metalness });
@@ -124,12 +125,15 @@ export class PlayerAvatar{
  }
  async loadOptional(){const modelPath=import.meta.env.DEV?'public/models/packer-player.glb':'models/packer-player.glb';const url=new URL(modelPath,document.baseURI);try{const response=await fetch(url,{method:'HEAD'});if(!response.ok||response.headers.get('content-type')?.includes('text/html'))return;const {GLTFLoader}=await import('three/addons/loaders/GLTFLoader.js');const gltf=await new GLTFLoader().loadAsync(url.href);const bounds=new THREE.Box3().setFromObject(gltf.scene);const size=bounds.getSize(new THREE.Vector3());gltf.scene.scale.setScalar(2.6/Math.max(size.y,.01));gltf.scene.position.y=-bounds.min.y*gltf.scene.scale.y;this.root.add(gltf.scene);this.model.visible=false;this.mixer=new THREE.AnimationMixer(gltf.scene);this.actions={};for(const clip of gltf.animations)this.actions[clip.name.toLowerCase()]=this.mixer.clipAction(clip);this.external=gltf.scene;}catch{/* Procedural avatar remains available. */}}
  update(dt, speed, sprint) {
+   this.motion = THREE.MathUtils.damp(this.motion, speed ? 1 : 0, 12, dt);
    this.phase += dt * (sprint ? 16 : 10);
    this.throwTime = Math.max(0, this.throwTime - dt);
    this.celebrateTime = Math.max(0, this.celebrateTime - dt);
-   const stride = speed ? Math.sin(this.phase) * .65 : Math.sin(this.phase * .3) * .03;
-   this.model.rotation.x = speed ? (sprint ? .17 : .11) : 0;
-   this.model.position.y = speed ? Math.abs(Math.sin(this.phase)) * .07 : Math.sin(this.phase * .3) * .012;
+   const stride = Math.sin(this.phase) * .68 * this.motion;
+   this.model.rotation.x = (sprint ? .19 : .115) * this.motion;
+   this.model.rotation.y = Math.sin(this.phase) * .095 * this.motion;
+   this.model.rotation.z = -Math.cos(this.phase) * .045 * this.motion;
+   this.model.position.y = Math.abs(Math.sin(this.phase)) * .057 * this.motion + Math.sin(this.phase * .3) * .011 * (1 - this.motion);
    for (let i = 0; i < 2; i++) {
      const side = i === 0 ? -1 : 1;
      this.legs[i].rotation.x = -side * stride;
@@ -144,8 +148,10 @@ export class PlayerAvatar{
      }
    }
    if (this.throwTime) {
-     this.arms[1].rotation.x = -2.35 * Math.sin(this.throwTime * 4);
-     this.elbows[1].rotation.x = -.30;
+     const windup = 1 - this.throwTime / .66;
+     this.model.rotation.y = Math.sin(windup * Math.PI * 2) * .37;
+     this.arms[1].rotation.x = -2.47 * Math.sin(windup * Math.PI);
+     this.elbows[1].rotation.x = -.98 + Math.sin(windup * Math.PI) * .67;
    }
    if (this.mixer) {
      const key = this.celebrateTime ? 'celebration' : this.throwTime ? 'throw'
@@ -159,10 +165,13 @@ export class PlayerAvatar{
      this.mixer.update(dt);
    }
  }
- throw() {
-   this.throwTime = .7;
+ throw() { this.throwTime = .66; }
+ releaseBall(position) {
+   if (this.external) return this.root.getWorldPosition(position).add(new THREE.Vector3(.4, 1.65, .22));
+   this.ball.getWorldPosition(position);
    this.ball.visible = false;
-   setTimeout(() => { this.ball.visible = true; }, 1000);
+   return position;
  }
+ recoverBall() { this.ball.visible = true; }
  celebrate() { this.celebrateTime = 1.6; }
 }

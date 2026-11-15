@@ -45,3 +45,30 @@ button, .hud-actions a { min-height: 42px; }
   .quick { bottom: 109px; }
 }
 @media(max-width:700px) and (pointer:coarse) { .quick { bottom: 178px; } }
+
+.tour-stops, .tour-navigation, .graphics-controls { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.tour-stops button, .tour-navigation button:not(.primary), .tour-demo-button { color:#203731; background:#e4ede3; border:1px solid #c0cdbc; }
+.tour-stops [aria-current=step] { background:#203731; color:white; }
+.tour-story { margin:20px 0; }
+.tour-demo { background:#182d26; border-radius:13px; color:#f6f5ec; padding:18px; }
+.tour-demo h3 { margin:0 0 2px; }
+.tour-demo p { color:#cfddd2; margin:5px 0; }
+.tour-demo-screen { padding:12px; margin:12px 0; background:#263f35; border-radius:7px; }
+.tour-demo-screen strong { color:#ffc744; }
+.tour-navigation { justify-content:space-between; margin-top:16px; }
+.graphics-controls { pointer-events:auto; margin-top:7px; font-size:11px; }
+.graphics-controls small { margin:0!important; }
+.graphics-controls select { font:inherit; color:#eef6ec; border:1px solid #94a69c; background:#203731; border-radius:5px; padding:5px 7px; }
+#touch-action { padding:10px; min-width:96px; max-width:110px; overflow-wrap:anywhere; }
+@media(max-width:700px){
+  .welcome-actions .secondary { white-space:normal; }
+  .quick { gap:4px; }
+  .quick button { padding:6px 9px; }
+  .tour-story { gap:10px; }
+  .tour-navigation > button { min-width:0; }
+}
+@media(max-width:700px){
+ .location { max-width:calc(100vw - 36px); }
+ .quick button { min-height:44px; }
+ #touch-hint { max-width:calc(100vw - 124px); }
+}
