@@ -150,6 +150,57 @@ export function addGrandstands(scene, compact) {
   }
   stand.receiveShadow = true;
   model.add(stand, bodies, heads);
+  const seats = [];
+  const railings = [];
+  for (const item of tiers) {
+    if (item.stair) {
+      const center = item.point.clone();
+      center.y = item.row * .82 + 1.49;
+      railings.push({ point: center, angle: item.angle, width: 1.55 });
+      continue;
+    }
+    const tangent = new THREE.Vector3(Math.cos(item.angle), 0, -Math.sin(item.angle));
+    for (const offset of [-.65, .55]) {
+      const seat = item.point.clone().addScaledVector(tangent, offset * Math.min(1.6, item.width * .42));
+      seat.y = item.row * .82 + .91;
+      seats.push({ point: seat, angle: item.angle, color: item.row % 4 === 0 ? '#b4873b' : '#294b40' });
+    }
+  }
+  function details(items, geometry, tint) {
+    const mesh = new THREE.InstancedMesh(geometry, new THREE.MeshStandardMaterial({ color: tint, roughness: .58, metalness: .18 }), items.length);
+    items.forEach((item, i) => {
+      pose.position.copy(item.point);
+      pose.rotation.set(0, item.angle, 0);
+      pose.scale.set(item.width || 1, 1, 1);
+      pose.updateMatrix();
+      mesh.setMatrixAt(i, pose.matrix);
+      if (item.color) mesh.setColorAt(i, color.set(item.color));
+    });
+    mesh.receiveShadow = true;
+    model.add(mesh);
+    return mesh;
+  }
+  const seatsMesh = details(seats, new RoundedBoxGeometry(.49, .43, .18, 1, .045), '#ffffff');
+  details(railings, new THREE.BoxGeometry(.82, .055, .055), '#c0bbac');
+  for (const sign of [-1, 1]) {
+    for (let section = -2; section <= 2; section++) {
+      const length = 14;
+      const suite = new THREE.Mesh(new RoundedBoxGeometry(3.5, 2.3, length, 1, .15),
+        new THREE.MeshStandardMaterial({ color: '#52655b', roughness: .74 }));
+      suite.position.set(sign * (43 + rows * .6), rows * .82 + 1.15, section * 15);
+      model.add(suite);
+      const windows = new THREE.Mesh(new THREE.BoxGeometry(.07, 1.28, length - .9),
+        new THREE.MeshStandardMaterial({ color: '#50706d', roughness: .34, metalness: .3, emissive: '#473721', emissiveIntensity: .26 }));
+      windows.position.copy(suite.position);
+      windows.position.x -= sign * 1.77;
+      model.add(windows);
+    }
+  }
+  return { setDetail(mode) {
+    const count = mode === 'light' ? .42 : mode === 'balanced' ? .72 : 1;
+    bodies.count = heads.count = Math.floor(occupancy.length * count);
+    seatsMesh.count = Math.floor(seats.length * (mode === 'light' ? .68 : 1));
+  }};
   model.add(ovalBand([57, 89], [49, 81], -.09, '#71817c'));
 }
 
@@ -167,4 +218,54 @@ export function roundedArch(x, z) {
   arch.position.set(x, 0, z);
   arch.castShadow = true;
   return arch;
+}
+
+export function addTunnel(scene) {
+  const tunnel = new THREE.Group();
+  tunnel.position.set(-35, 0, -1);
+  tunnel.rotation.y = Math.PI / 2;
+  scene.add(tunnel);
+  const concrete = new THREE.MeshStandardMaterial({ color: '#5f6c63', roughness: .88 });
+  const cladding = new THREE.MeshStandardMaterial({ color: '#223c34', roughness: .72 });
+  function part(width, height, depth, x, y, z, material, parent = tunnel) {
+    const mesh = new THREE.Mesh(new RoundedBoxGeometry(width, height, depth, 1, .09), material);
+    mesh.position.set(x, y, z);
+    mesh.castShadow = mesh.receiveShadow = true;
+    parent.add(mesh);
+    return mesh;
+  }
+  for (const side of [-1, 1]) {
+    part(.44, 3.3, 8.6, side * 3.68, 1.65, -1.8, concrete);
+    part(1.12, .55, 1.4, side * 4.1, .25, 2.9, cladding);
+  }
+  part(7.66, .46, 8.6, 0, 3.35, -1.8, concrete);
+  part(7.45, .14, 8.6, 0, .015, -1.8, cladding);
+  part(7.4, 3.3, .20, 0, 1.65, -6, cladding);
+  const curve = new THREE.CatmullRomCurve3([
+    [-3.7,.12,2.53],[-3.7,2.47,2.53],[-3.21,3.16,2.53],[-2.2,3.54,2.53],
+    [0,3.62,2.53],[2.2,3.54,2.53],[3.21,3.16,2.53],[3.7,2.47,2.53],[3.7,.12,2.53],
+  ].map(point => new THREE.Vector3(...point)));
+  tunnel.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 40, .23, 7),
+    new THREE.MeshStandardMaterial({ color:'#b9984b',roughness:.52,metalness:.22 })));
+  const lamp = new THREE.MeshBasicMaterial({ color: '#ffe9a8' });
+  for (const z of [-4.65, -2.35, -.05, 1.68]) part(3.6,.09,.12,0,3.05,z,lamp);
+}
+
+export function contactShadow(scene) {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 64;
+  const context = canvas.getContext('2d');
+  const fade = context.createRadialGradient(32, 32, 2, 32, 32, 31);
+  fade.addColorStop(0, '#000a');
+  fade.addColorStop(1, '#0000');
+  context.fillStyle = fade;
+  context.fillRect(0, 0, 64, 64);
+  const material = new THREE.MeshBasicMaterial({
+    map: new THREE.CanvasTexture(canvas), transparent: true, opacity: .65, depthWrite: false, polygonOffset:true, polygonOffsetFactor:-1,
+  });
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 2.5), material);
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.position.y = .074;
+  scene.add(mesh);
+  return mesh;
 }
