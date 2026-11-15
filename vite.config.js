@@ -1,11 +1,13 @@
-import { cpSync, existsSync } from 'node:fs';
+import { copyFileSync, cpSync, existsSync } from 'node:fs';
 import { defineConfig } from 'vite';
+
+const additionalFiles = ['classic.html', 'portfolio.js', 'logo-rihm.webp'];
 
 export default defineConfig({
   base: './',
   publicDir: 'dist',
   plugins: [{
-    name: 'optional-player-model',
+    name: 'portfolio-static-files',
     configureServer(server) {
       server.middlewares.use('/models', (request, response, next) => {
         request.url = '/public/models' + request.url;
@@ -13,6 +15,7 @@ export default defineConfig({
       });
     },
     closeBundle() {
+      for (const file of additionalFiles) copyFileSync(file, `build/${file}`);
       if (existsSync('public/models')) cpSync('public/models', 'build/models', { recursive: true });
     },
   }],
