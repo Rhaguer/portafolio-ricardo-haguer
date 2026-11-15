@@ -236,6 +236,7 @@ export function addTunnel(scene) {
     const mesh = new THREE.Mesh(new RoundedBoxGeometry(width, height, depth, 1, .09), material);
     mesh.position.set(x, y, z);
     mesh.castShadow = mesh.receiveShadow = true;
+    mesh.userData.cameraSolid=height>.35&&y>.4;
     parent.add(mesh);
     return mesh;
   }
@@ -305,6 +306,7 @@ export function addLockerRoom(scene, center) {
     mesh.position.set(x,y,z);
     mesh.receiveShadow = true;
     mesh.castShadow = true;
+    mesh.userData.cameraSolid=(h>.3||w>.5)&&y>.31;
     room.add(mesh);
     return mesh;
   }

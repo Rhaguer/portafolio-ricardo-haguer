@@ -161,6 +161,22 @@ $('panel-content').addEventListener('click',event=>{
   if(tech)listing('',tech.dataset.tech);
   if(event.target.closest('[data-share-project]'))shareProject($('share-status'));
 });
+const fieldDestinations=new Map();
+function initFieldProjects() {
+  const featured=projects.filter(item=>item.featured);
+  for(const item of projects)if(featured.length<4&&!featured.includes(item))featured.push(item);
+  $('field-cards').innerHTML=featured.slice(0,4).map((item,index)=>`<button type="button" data-field-project="${esc(item.repo)}">
+    <img src="${esc(item.image)}" width="64" height="44" alt=""><span><small>${index+1} · ${esc(categoryLabels[item.category])}</small><strong>${esc(item.title)}</strong></span>
+  </button>`).join('');
+  $('field-markers').innerHTML=featured.slice(0,4).map((item,index)=>`<button type="button" data-field-project="${esc(item.repo)}" hidden><span aria-hidden="true">${index+1}</span>${esc(item.title)}</button>`).join('');
+  for(const button of $('field-markers').querySelectorAll('[data-field-project]'))fieldDestinations.set(button.dataset.fieldProject,button);
+}
+$('play-hud').addEventListener('click',event=>{
+  const button=event.target.closest('[data-field-project]');
+  if(!button)return;
+  $('field-directory').open=false;
+  game.openDestination(button.dataset.fieldProject);
+});
 let statusClock;
 function status(message){
   $('game-status').textContent=message;
@@ -180,11 +196,20 @@ $('enter').onclick=async()=>{
   $('loading').textContent='Preparando el campo…';
   try{
     const [{createGame}]=await Promise.all([import('./scene.js'),catalog]);
+    initFieldProjects();
     game=await createGame({
       container:$('world'),projects,onOpen:open,
       onProject:p=>{lastListing=null;project(p);},
       onFailure:()=>location.assign('./classic.html'),
       onStatus:status,
+      onDestinations:placements=>{
+        for(const {repo,x,y,visible} of placements){
+          const button=fieldDestinations.get(repo);
+          if(!button)continue;
+          button.hidden=!visible;
+          if(visible)button.style.transform=`translate3d(${Math.round(x)}px,${Math.round(y)}px,0) translate(-50%,-100%)`;
+        }
+      },
       onQuality:level=>{
         const labels={light:'ligera',balanced:'equilibrada',high:'alta'};
         $('graphics-state').textContent='Calidad automática · '+labels[level];
@@ -195,11 +220,12 @@ $('enter').onclick=async()=>{
         $('map').setAttribute('aria-pressed','false');
         $('map').textContent='Mapa aéreo';
       },
-      onZone:(label,hint,action)=>{
+      onZone:(label,hint,action,canPass)=>{
         $('zone-label').textContent=label;
         $('hint').textContent=hint;
         $('interact').textContent=action;
         $('touch-action').textContent=action;
+        $('pass-action').hidden=!canPass||action==='Pasar a #87';
       },
       onTouchdown:()=>{
         $('announcement').textContent='TOUCHDOWN';
@@ -223,7 +249,11 @@ $('enter').onclick=async()=>{
     $('game-menu').hidden=false;
     if($('panel').open)game.pause(true);
     else $('world').focus({preventScroll:true});
-    $('interact').onclick=$('touch-action').onclick=()=>game.action();
+    $('interact').onclick=$('touch-action').onclick=()=>{
+      if($('interact').textContent==='Pasar a #87')game.pass();
+      else game.action(true);
+    };
+    $('pass-action').onclick=()=>game.pass();
     $('snow').onclick=()=>{
       const enabled=game.toggleSnow();
       $('snow').setAttribute('aria-pressed',enabled);
