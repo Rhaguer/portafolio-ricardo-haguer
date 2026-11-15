@@ -253,3 +253,25 @@ dialog { max-width:calc(100% - 16px); max-height:calc(100dvh - 24px); overscroll
 @media (prefers-reduced-motion:reduce) {
   .field-directory, .field-markers button { transition:none; }
 }
+
+.match-score { position:fixed; z-index:4; left:max(14px,3.5vw,env(safe-area-inset-left,0px)); bottom:calc(91px + env(safe-area-inset-bottom,0px)); width:min(305px,calc(100% - 28px)); padding:8px 10px; background:#102820f5; border:1px solid #edbb53b0; border-radius:7px; }
+.match-score p { display:flex; align-items:center; gap:6px 9px; margin:0; flex-wrap:wrap; font-size:.78rem; }
+.match-score strong { color:#ffc54f; font-size:1rem; font-variant-numeric:tabular-nums; }
+#controlled-player { margin-left:auto; color:#cdddcb; }
+#try-actions { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+#try-actions button { min-height:39px; padding:6px 9px; font-size:.75rem; }
+#kick-meter { margin-top:7px; font-size:.73rem; }
+.kick-track { position:relative; height:10px; border-radius:5px; margin:5px 0; background:linear-gradient(90deg,#797d4d 0 31%,#8ec89a 31% 69%,#797d4d 69% 100%); }
+#kick-target-marker { position:absolute; left:50%; top:-2px; bottom:-2px; width:4px; border-radius:3px; background:#fff; box-shadow:0 0 3px #18211b; }
+#kick-action,#pass-action { min-height:44px; }
+@media (any-pointer:coarse) {
+ .match-score { bottom:calc(clamp(69px,20vmin,108px) + 25px + env(safe-area-inset-bottom,0px)); }
+}
+@media (max-width:480px) {
+ .match-score { left:12px; width:min(220px,calc(100% - 24px)); }
+ .match-score p { font-size:.72rem; }
+ .match-score strong { font-size:.9rem; }
+}
+@media (max-height:480px) and (orientation:landscape) {
+ .match-score { bottom:calc(17px + env(safe-area-inset-bottom,0px)); left:calc(clamp(69px,20vmin,108px) + 26px); width:205px; }
+}

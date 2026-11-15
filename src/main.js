@@ -177,7 +177,7 @@ $('play-hud').addEventListener('click',event=>{
   $('field-directory').open=false;
   game.openDestination(button.dataset.fieldProject);
 });
-let statusClock;
+let statusClock, scoreClock;
 function status(message){
   $('game-status').textContent=message;
   clearTimeout(statusClock);
@@ -214,6 +214,22 @@ $('enter').onclick=async()=>{
         const labels={light:'ligera',balanced:'equilibrada',high:'alta'};
         $('graphics-state').textContent='Calidad automática · '+labels[level];
       },
+      onPlay:({active,points,number,receiver,extra,conversion})=>{
+        $('match-score').hidden=!active;
+        $('points-total').textContent=points+' pts';
+        $('controlled-player').textContent='Jugador #'+number;
+        $('pass-action').textContent='Pase al #'+receiver;
+        $('try-actions').hidden=!active||!extra;
+        $('kick-action').hidden=!active||conversion;
+        $('kick-action').textContent=extra?'Patear punto extra':'Patear · K';
+      },
+      onKickAim:value=>{
+        $('kick-meter').hidden=value===null;
+        if(value!==null){
+          $('kick-target-marker').style.left=(50+value*45)+'%';
+          $('kick-action').textContent='Soltar patada · K';
+        }
+      },
       onRoom:inside=>{
         $('leave-room').hidden=!inside;
         $('map').disabled=inside;
@@ -225,11 +241,12 @@ $('enter').onclick=async()=>{
         $('hint').textContent=hint;
         $('interact').textContent=action;
         $('touch-action').textContent=action;
-        $('pass-action').hidden=!canPass||action==='Pasar a #87';
+        $('pass-action').hidden=!canPass||action.startsWith('Pasar al #');
       },
-      onTouchdown:()=>{
-        $('announcement').textContent='TOUCHDOWN';
-        setTimeout(()=>$('announcement').textContent='',1400);
+      onTouchdown:message=>{
+        $('announcement').textContent=message;
+        clearTimeout(scoreClock);
+        scoreClock=setTimeout(()=>$('announcement').textContent='',1450);
       },
     });
     $('graphics-backend').textContent=game.backend;
@@ -250,10 +267,13 @@ $('enter').onclick=async()=>{
     if($('panel').open)game.pause(true);
     else $('world').focus({preventScroll:true});
     $('interact').onclick=$('touch-action').onclick=()=>{
-      if($('interact').textContent==='Pasar a #87')game.pass();
+      if($('interact').textContent.startsWith('Pasar al #'))game.pass();
       else game.action(true);
     };
     $('pass-action').onclick=()=>game.pass();
+    $('kick-action').onclick=()=>game.kick();
+    $('two-points').onclick=()=>{game.tryForTwo();$('world').focus({preventScroll:true});};
+    $('skip-try').onclick=()=>{game.skipTry();$('world').focus({preventScroll:true});};
     $('snow').onclick=()=>{
       const enabled=game.toggleSnow();
       $('snow').setAttribute('aria-pressed',enabled);
