@@ -296,46 +296,96 @@ export function addLockerRoom(scene, center) {
   room.position.copy(center);
   room.rotation.y=Math.PI/2;
   scene.add(room);
-  const wood = new THREE.MeshStandardMaterial({color:'#815e41',roughness:.82});
-  const steel = new THREE.MeshStandardMaterial({color:'#263c3b',roughness:.56,metalness:.23});
-  const wall = new THREE.MeshStandardMaterial({color:'#8f9d92',roughness:.8});
-  const felt = new THREE.MeshStandardMaterial({color:'#234638',roughness:.96});
-  const light = new THREE.MeshBasicMaterial({color:'#ffe6af'});
-  function part(w,h,d,x,y,z,material,radius=.045) {
-    const mesh = new THREE.Mesh(new RoundedBoxGeometry(w,h,d,1,radius),material);
-    mesh.position.set(x,y,z);
-    mesh.receiveShadow = true;
-    mesh.castShadow = true;
-    mesh.userData.cameraSolid=(h>.3||w>.5)&&y>.31;
-    room.add(mesh);
-    return mesh;
-  }
-  const panels = new THREE.MeshStandardMaterial({color:'#263f34',roughness:.73});
-  part(15,.22,14,0,-.105,0,wood);
-  part(8,.025,6,0,.018,0,felt,.007);
-  part(15,4.5,.35,0,2.25,-6.8,panels);
-  part(15,.28,14,0,4.55,0,steel);
-  part(14.5,.23,.32,0,4.30,-6.55,steel);
-  for (const side of [-1,1]) {
-    part(.35,4.5,13.7,side*7.3,2.25,0,wall);
-    part(3.87,4.5,.24,side*5.51,2.25,6.83,panels);
-    for (const z of [-5,-3,-1,1,3]) {
-      part(.88,2.87,1.91,side*6.55,1.50,z,steel);
-      part(.13,2.76,1.74,side*6.04,1.51,z,wood);
-      part(.72,.07,1.71,side*6.0,2.76,z,light,.02);
-      part(.68,.18,1.72,side*6.01,.45,z,wood);
+  const wood = new THREE.MeshStandardMaterial({color:'#a46f45',roughness:.72});
+  const darkWood = new THREE.MeshStandardMaterial({color:'#5d3e2b',roughness:.78});
+  const steel = new THREE.MeshStandardMaterial({color:'#293431',roughness:.5,metalness:.25});
+  const wall = new THREE.MeshStandardMaterial({color:'#8e9c90',roughness:.87});
+  const panels = new THREE.MeshStandardMaterial({color:'#1c4032',roughness:.73});
+  const gold = new THREE.MeshStandardMaterial({color:'#d9a342',roughness:.46,metalness:.22});
+  const shell = new THREE.MeshStandardMaterial({color:'#e0b24f',roughness:.29,metalness:.12});
+  const felt = new THREE.MeshStandardMaterial({color:'#21483a',roughness:.98});
+  const fabric = new THREE.MeshStandardMaterial({color:'#f3e8d4',roughness:.96});
+  const tile = new THREE.MeshStandardMaterial({color:'#53635b',roughness:.86});
+  const light = new THREE.MeshBasicMaterial({color:'#fff0ce',toneMapped:false});
+  const boards=[];
+
+  function part(w,h,d,x,y,z,material,radius=.035,solid=false) {
+    if(solid){
+      const mesh=new THREE.Mesh(new RoundedBoxGeometry(w,h,d,1,radius),material);
+      mesh.name='Mobiliario y muros del camarín';
+      mesh.position.set(x,y,z);
+      mesh.receiveShadow=mesh.castShadow=true;
+      mesh.userData.cameraSolid=true;
+      room.add(mesh);
+      return;
     }
-    part(.95,.21,4.45,side*4.61,.58,-1.1,wood);
-    for (const z of [-2.66,.47])part(.62,.5,.18,side*4.61,.29,z,steel);
-    part(.08,.10,10.8,side*4.68,4.37,-.14,light,.02);
+    boards.push({w,h,d,x,y,z,material});
   }
-  part(5.8,2.43,.22,0,2.48,-6.58,steel);
-  part(5.7,.055,.18,0,1.23,-6.44,light,.018);
-  const roomLight=new THREE.PointLight('#ffdc9f',145,18,2);
-  roomLight.position.set(0,4.22,-2.2);
-  room.add(roomLight);
-  const entranceLight=new THREE.PointLight('#fff0cc',62,13,2);
-  entranceLight.position.set(0,4.25,4.2);
-  room.add(entranceLight);
+  part(15,.23,14,0,-.106,0,tile);
+  part(15,4.5,.35,0,2.25,-6.8,panels,.04,true);
+  part(15,.28,14,0,4.55,0,steel,.04,true);
+  part(6.6,.036,8.7,0,.025,-.68,felt);
+  for(const side of [-1,1]){
+    part(.35,4.5,13.7,side*7.3,2.25,0,wall,.04,true);
+    part(3.87,4.5,.24,side*5.51,2.25,6.83,panels,.04,true);
+    part(.06,.105,12.65,side*7.10,3.61,0,gold);
+    part(.14,.085,11.6,side*4.25,4.38,0,light);
+    part(.13,.04,8.7,side*3.3,.039,-.68,gold);
+    for(let i=0;i<6;i++){
+      const z=-5.48+1.93*i;
+      part(.15,2.92,1.81,side*7.04,1.67,z,darkWood);
+      for(const divider of [-.88,.88])part(1.05,2.92,.105,side*6.49,1.67,z+divider,wood);
+      part(1.07,.16,1.84,side*6.49,3.17,z,wood);
+      part(1.04,.11,1.72,side*6.48,2.51,z,wood);
+      part(.11,.045,1.62,side*5.97,2.45,z,light);
+      part(1.04,.19,1.73,side*6.48,.55,z,wood);
+      part(.13,.54,1.63,side*5.98,.92,z,darkWood);
+      part(.09,.045,.33,side*5.89,.95,z,gold);
+      part(.08,.86,.59,side*6.47,1.89,z,i%3===2?fabric:felt);
+      part(.085,.33,.96,side*6.47,2.08,z,i%3===2?fabric:felt);
+      part(.093,.085,.61,side*6.41,1.56,z,gold);
+      part(.38,.12,.54,side*6.43,.71,z+.36,fabric);
+      part(.32,.085,.51,side*6.39,.80,z+.36,fabric);
+      const helmet=new THREE.Mesh(new THREE.SphereGeometry(.23,12,7,0,Math.PI*2,0,Math.PI*.71),shell);
+      helmet.position.set(side*6.39,2.80,z-.28);
+      room.add(helmet);
+      const visor=new THREE.Mesh(new THREE.TorusGeometry(.145,.021,5,12,Math.PI),steel);
+      visor.rotation.y=side*Math.PI/2;
+      visor.position.set(side*6.15,2.71,z-.28);
+      room.add(visor);
+    }
+    for(const z of [-2.85,2.18]){
+      part(.87,.16,3.5,side*4.99,.56,z,wood,.075,true);
+      for(const leg of [-1.22,1.22])part(.64,.46,.14,side*4.99,.29,z+leg,steel);
+      part(.71,.09,3.43,side*4.99,.485,z,darkWood);
+    }
+  }
+  for(let z=-6;z<=6;z+=.9)part(14.9,.003,.016,0,.013,z,steel,.001);
+  for(const z of [-4.6,-.7,3.2]){
+    part(2.2,.09,.36,0,4.36,z,steel);
+    part(1.98,.048,.23,0,4.30,z,light);
+  }
+  part(5.84,2.57,.24,0,2.48,-6.58,steel,.07,true);
+  part(5.66,.06,.18,0,1.22,-6.43,gold);
+  part(5.2,.13,.63,0,.87,-6.27,wood,.035,true);
+  part(4.83,.67,.5,0,.43,-6.29,darkWood,.035,true);
+  for(const mat of new Set(boards.map(board=>board.material))){
+    const group=boards.filter(board=>board.material===mat);
+    const mesh=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),mat,group.length);
+    const pose=new THREE.Object3D();
+    for(const [index,item] of group.entries()){
+      pose.position.set(item.x,item.y,item.z);
+      pose.scale.set(item.w,item.h,item.d);
+      pose.updateMatrix();
+      mesh.setMatrixAt(index,pose.matrix);
+    }
+    mesh.receiveShadow=true;
+    room.add(mesh);
+  }
+  for(const [z,color,power] of [[-4.5,'#ffdbad',105],[.4,'#ffe8c9',94],[4.7,'#eef5e0',72]]){
+    const lamp=new THREE.PointLight(color,power,15,2);
+    lamp.position.set(0,4.19,z);
+    room.add(lamp);
+  }
   return room;
 }

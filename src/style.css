@@ -275,3 +275,51 @@ dialog { max-width:calc(100% - 16px); max-height:calc(100dvh - 24px); overscroll
 @media (max-height:480px) and (orientation:landscape) {
  .match-score { bottom:calc(17px + env(safe-area-inset-bottom,0px)); left:calc(clamp(69px,20vmin,108px) + 26px); width:205px; }
 }
+
+.home-card .home-proof { display:block; margin-top:5px; color:#cddece; font-size:.75rem; line-height:1.34; }
+.stadium-top,
+.stadium-bottom { position:fixed; left:max(12px,3.4vw,env(safe-area-inset-left,0px)); right:max(12px,3.4vw,env(safe-area-inset-right,0px)); display:grid; gap:8px; z-index:4; pointer-events:none; }
+.stadium-top { top:calc(75px + env(safe-area-inset-top,0px)); grid-template-columns:minmax(0,1fr) auto; align-items:start; }
+.stadium-top > *, .stadium-bottom :is(button,.match-score,#joystick) { pointer-events:auto; }
+.stadium-top .location,.stadium-top .field-directory,.stadium-top #leave-room { position:static; inset:auto; margin:0; max-width:100%; }
+.stadium-top .location { width:fit-content; min-width:0; }
+.stadium-top .field-directory { width:clamp(145px,26vw,285px); }
+.stadium-top #leave-room { grid-column:1 / -1; justify-self:end; }
+.stadium-bottom { bottom:calc(12px + env(safe-area-inset-bottom,0px)); grid-template-columns:auto minmax(0,1fr) auto; align-items:end; }
+.stadium-bottom .stadium-play { min-width:0; max-width:410px; justify-self:center; width:100%; }
+.stadium-bottom .match-score,.stadium-bottom #game-status,.stadium-bottom .touch-controls,.stadium-bottom #joystick { position:static; inset:auto; transform:none; margin:0; max-width:100%; }
+.stadium-bottom .match-score { width:100%; }
+.stadium-bottom #game-status { margin-bottom:5px; text-align:center; font-size:.78rem; }
+.stadium-bottom #game-status:empty { display:none; }
+.stadium-bottom .touch-controls { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px; width:clamp(145px,31vw,290px); }
+.stadium-bottom .touch-controls button { min-height:42px; min-width:0; font-size:.76rem; padding:6px 8px; }
+.stadium-bottom #interact:only-child { grid-column:1 / -1; }
+#play-result:not([hidden]) { display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin-top:5px; }
+#play-result button { font-size:.75rem; min-height:38px; padding:5px 9px; }
+#play-result-label { flex-basis:100%; color:#ffdb83; }
+.field-card { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px; }
+.field-card .field-guide { min-height:42px; font-size:.72rem; background:#132d25; }
+body:has(dialog[open]) .stadium-bottom, body:has(dialog[open]) .stadium-top { visibility:hidden; }
+@media (max-width:700px) {
+  .stadium-top { top:calc(62px + env(safe-area-inset-top,0px)); }
+  .stadium-bottom { grid-template-areas:"score score" "move controls"; grid-template-columns:auto minmax(0,1fr); }
+  .stadium-play { grid-area:score; }
+  .stadium-moving { grid-area:move; }
+  .stadium-bottom .touch-controls { grid-area:controls; justify-self:end; width:min(210px,100%); }
+  .stadium-bottom .match-score { width:min(290px,100%); margin:auto; }
+}
+@media (max-height:460px) and (orientation:landscape) {
+  .stadium-top { top:calc(62px + env(safe-area-inset-top,0px)); }
+  .stadium-bottom { grid-template-areas:"move score controls"; grid-template-columns:auto minmax(0,1fr) auto; }
+  .stadium-play { grid-area:score; }
+  .stadium-moving { grid-area:move; }
+  .stadium-bottom .touch-controls { grid-area:controls; min-width:145px; width:min(210px,32vw); }
+}
+.field-plan { position:relative; height:99px; margin:0 10px 4px; border:1px solid #91aa94; border-radius:5px; background:repeating-linear-gradient(to bottom,#214636 0 10px,#527263 10px 11px,#284c3b 11px 20px); }
+.field-plan::before { content:'N'; position:absolute; top:3px; right:5px; font:700 10px ui-monospace,monospace; color:#fff7dc; }
+.field-plan button { position:absolute; inset:var(--my) auto auto var(--mx); transform:translate(-50%,-50%); width:30px; height:32px; padding:0; border-radius:5px; background:#ffd170; color:#173428; font-weight:800; }
+.field-plan button:hover { background:#fff2c9; }
+@media (max-height:460px) and (orientation:landscape) {
+ .field-plan { display:none; }
+ .stadium-top .field-cards { max-height:min(38dvh,190px); }
+}

@@ -20,7 +20,7 @@ function fabricTexture(){
   return fabric;
 }
 export class PlayerAvatar{
- constructor({number='12',uniform='#203731',trim='#ffb612',carriesBall=true} = {}) {
+ constructor({number='12',uniform='#203731',trim='#ffb612',carriesBall=true,compact=false} = {}) {
    this.carriesBall = carriesBall;
    this.root = new THREE.Group();
    this.model = new THREE.Group();
@@ -45,7 +45,7 @@ export class PlayerAvatar{
    green.bumpScale=.014;
    ballLeather.bumpMap=cloth;
    ballLeather.bumpScale=.011;
-   const oval = new THREE.SphereGeometry(1, carriesBall ? 26 : 16, carriesBall ? 18 : 11);
+   const oval = new THREE.SphereGeometry(1, carriesBall&&!compact ? 26 : 16, carriesBall&&!compact ? 18 : 11);
    function fit(parent, geometry, material, position, scale = [1, 1, 1]) {
      const mesh = new THREE.Mesh(geometry, material);
      mesh.position.set(...position);
