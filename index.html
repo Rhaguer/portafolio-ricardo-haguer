@@ -1,4 +1,4 @@
-<!doctype html><html lang="es-CL"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#203731"><meta name="description" content="Ricardo Haguer. Software, datos y automatización. Explora 13 proyectos documentados en un estadio 3D interactivo o en la vista clásica accesible."><title>Ricardo Haguer — El campo de las ideas</title><link rel="icon" href="./logo-rihm.webp"><link rel="stylesheet" href="/src/style.css"></head><body>
+<!doctype html><html lang="es-CL"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#203731"><meta name="description" content="Ricardo Haguer. Software, datos y automatización. Explora 13 proyectos documentados en un estadio 3D interactivo o en la vista clásica accesible."><title>Ricardo Haguer — El campo de las ideas</title><link rel="icon" href="./logo-rihm.webp"><link rel="stylesheet" href="/src/style.css"></head><body>
 <a class="skip" href="./classic.html#proyectos">Ir a los proyectos</a><div id="world" role="region" aria-label="Campo de juego. Usa las flechas o WASD para moverte, Espacio para pasar y Enter para abrir una zona." tabindex="-1"></div>
 <header class="hud"><a class="identity" href="./"><img src="./logo-rihm.webp" alt="Logotipo RIHM"><span>RICARDO HAGUER<small>SOFTWARE & AUTOMATIZACIÓN</small></span></a><div class="hud-actions"><button type="button" data-open="all" class="hud-projects">Proyectos</button><button type="button" data-open="contact" id="contact-entry">Contacto</button><button type="button" id="game-menu" aria-haspopup="dialog" hidden>Menú</button><a href="./classic.html">Vista Clásica ↗</a></div></header>
 <main id="welcome" class="welcome">
@@ -22,10 +22,18 @@
 </main>
 <aside id="play-hud" hidden aria-label="Controles del estadio">
   <div class="location"><strong id="zone-label">Centro del campo</strong><small id="hint"></small></div>
+  <div id="field-markers" class="field-markers" aria-label="Proyectos destacados en el campo"></div>
+  <details class="field-directory" id="field-directory">
+    <summary>Destacados en el campo</summary>
+    <div class="field-cards" id="field-cards"></div>
+  </details>
   <button type="button" id="leave-room" class="secondary" hidden>Volver al campo</button>
   <div class="bottom-hud"><span>WASD / flechas · Arrastra para mirar · Enter o Espacio para actuar</span><button id="interact" class="primary">Abrir proyectos</button></div>
   <div id="joystick" aria-label="Joystick de movimiento"><i></i></div>
-  <button id="touch-action" class="primary">Abrir proyectos</button>
+  <div class="touch-controls">
+    <button id="pass-action" type="button" class="secondary" hidden>Pase al #87</button>
+    <button id="touch-action" type="button" class="primary">Abrir proyectos</button>
+  </div>
   <p id="game-status" role="status" aria-live="polite"></p>
 </aside>
 <dialog id="pause-menu" aria-labelledby="pause-title">
