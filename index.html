@@ -27,10 +27,19 @@
     <summary>Destacados en el campo</summary>
     <div class="field-cards" id="field-cards"></div>
   </details>
+  <section id="match-score" class="match-score" aria-label="Marcador de jugada" hidden>
+    <p><span>Marcador</span> <strong id="points-total" aria-live="polite">0 pts</strong> <span id="controlled-player">Jugador #12</span></p>
+    <div id="try-actions" hidden><button type="button" id="two-points">Intentar 2 puntos</button><button type="button" id="skip-try">Saltar intento</button></div>
+    <div id="kick-meter" hidden>
+      <span>Patea al pasar por el centro</span>
+      <div class="kick-track"><i id="kick-target-marker"></i></div>
+    </div>
+  </section>
   <button type="button" id="leave-room" class="secondary" hidden>Volver al campo</button>
-  <div class="bottom-hud"><span>WASD / flechas · Arrastra para mirar · Enter o Espacio para actuar</span><button id="interact" class="primary">Abrir proyectos</button></div>
+  <div class="bottom-hud"><span>WASD / flechas · Espacio para pasar · K para patear</span><button id="interact" class="primary">Abrir proyectos</button></div>
   <div id="joystick" aria-label="Joystick de movimiento"><i></i></div>
   <div class="touch-controls">
+    <button id="kick-action" type="button" class="secondary" hidden>Patear <kbd>K</kbd></button>
     <button id="pass-action" type="button" class="secondary" hidden>Pase al #87</button>
     <button id="touch-action" type="button" class="primary">Abrir proyectos</button>
   </div>
