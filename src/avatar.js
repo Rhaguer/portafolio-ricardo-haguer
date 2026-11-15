@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 export class PlayerAvatar{
- constructor() {
+ constructor({number='12',uniform='#203731',trim='#ffb612',carriesBall=true} = {}) {
+   this.carriesBall = carriesBall;
    this.root = new THREE.Group();
    this.model = new THREE.Group();
    this.root.add(this.model);
@@ -11,8 +12,8 @@ export class PlayerAvatar{
 
    const makeMaterial = (color, roughness = .78, metalness = 0) =>
      new THREE.MeshStandardMaterial({ color, roughness, metalness });
-   const green = makeMaterial('#203731');
-   const gold = makeMaterial('#ffb612', .43, .09);
+   const green = makeMaterial(uniform);
+   const gold = makeMaterial(trim, .43, .09);
    const white = makeMaterial('#f6f4e8');
    const skin = makeMaterial('#986344');
    const graphite = makeMaterial('#27373b', .39, .23);
@@ -102,18 +103,19 @@ export class PlayerAvatar{
    context.font = 'bold 98px Arial';
    context.lineWidth = 5;
    context.strokeStyle = '#ffb612';
-   context.strokeText('12', 64, 66);
-   context.fillStyle = 'white';
-   context.fillText('12', 64, 66);
-   const number = new THREE.CanvasTexture(canvas);
-   number.colorSpace = THREE.SRGBColorSpace;
-   const jersey = new THREE.MeshBasicMaterial({ map: number, transparent: true, depthWrite: false });
+   context.strokeText(number, 64, 66);
+   context.fillStyle = carriesBall ? 'white' : '#182b38';
+   context.fillText(number, 64, 66);
+   const jerseyNumber = new THREE.CanvasTexture(canvas);
+   jerseyNumber.colorSpace = THREE.SRGBColorSpace;
+   const jersey = new THREE.MeshBasicMaterial({ map: jerseyNumber, transparent: true, depthWrite: false });
    for (const side of [-1, 1]) {
      const decal = fit(model, new THREE.PlaneGeometry(.56, .5), jersey, [0, 1.53, side * .297]);
      decal.rotation.y = side < 0 ? Math.PI : 0;
      decal.castShadow = false;
    }
 
+   if(!carriesBall)return;
    this.ball = new THREE.Group();
    this.ball.position.set(.045, -.18, .168);
    this.ball.rotation.z = -.38;
@@ -140,7 +142,7 @@ export class PlayerAvatar{
      this.knees[i].rotation.x = .06 + Math.max(0, side * stride) * (sprint ? 1.25 : 1.02);
      this.arms[i].rotation.x = side * stride * (i === 1 ? .58 : .9);
      this.arms[i].rotation.z = side * .12;
-     this.elbows[i].rotation.x = i === 1 ? -.79 : -.22 - Math.abs(stride) * .35;
+     this.elbows[i].rotation.x = i === 1 && this.carriesBall ? -.79 : -.22 - Math.abs(stride) * .35;
      if (this.celebrateTime) {
        this.arms[i].rotation.z = side * 2.55;
        this.elbows[i].rotation.x = -.16;

@@ -44,6 +44,7 @@ export function addAtmosphere(scene) {
   sky.colorSpace = THREE.SRGBColorSpace;
   const mesh = new THREE.Mesh(new THREE.SphereGeometry(224, 32, 16),
     new THREE.MeshBasicMaterial({ map: sky, side: THREE.BackSide, fog: false, toneMapped: false }));
+  mesh.name='Cielo';
   scene.add(mesh);
   scene.fog = new THREE.FogExp2('#adbfc4', .005);
 }
@@ -204,22 +205,6 @@ export function addGrandstands(scene, compact) {
   model.add(ovalBand([57, 89], [49, 81], -.09, '#71817c'));
 }
 
-export function roundedArch(x, z) {
-  const paths = [
-    new THREE.Vector3(-3.5, .12, 0), new THREE.Vector3(-3.5, 3.1, 0),
-    new THREE.Vector3(-3.15, 4.4, 0), new THREE.Vector3(-2.1, 5.12, 0),
-    new THREE.Vector3(0, 5.25, 0), new THREE.Vector3(2.1, 5.12, 0),
-    new THREE.Vector3(3.15, 4.4, 0), new THREE.Vector3(3.5, 3.1, 0),
-    new THREE.Vector3(3.5, .12, 0),
-  ];
-  const curve = new THREE.CatmullRomCurve3(paths);
-  const arch = new THREE.Mesh(new THREE.TubeGeometry(curve, 36, .18, 8, false),
-    new THREE.MeshStandardMaterial({ color: '#f1b944', metalness: .31, roughness: .35, emissive: '#995617', emissiveIntensity: .3 }));
-  arch.position.set(x, 0, z);
-  arch.castShadow = true;
-  return arch;
-}
-
 export function addTunnel(scene) {
   const tunnel = new THREE.Group();
   tunnel.position.set(-35, 0, -1);
@@ -268,4 +253,46 @@ export function contactShadow(scene) {
   mesh.position.y = .074;
   scene.add(mesh);
   return mesh;
+}
+
+export function addLockerRoom(scene, center) {
+  const room = new THREE.Group();
+  room.name = 'Camarín';
+  room.position.copy(center);
+  scene.add(room);
+  const wood = new THREE.MeshStandardMaterial({color:'#815e41',roughness:.82});
+  const steel = new THREE.MeshStandardMaterial({color:'#263c3b',roughness:.56,metalness:.23});
+  const wall = new THREE.MeshStandardMaterial({color:'#8f9d92',roughness:.8});
+  const felt = new THREE.MeshStandardMaterial({color:'#234638',roughness:.96});
+  const light = new THREE.MeshBasicMaterial({color:'#ffe6af'});
+  function part(w,h,d,x,y,z,material,radius=.045) {
+    const mesh = new THREE.Mesh(new RoundedBoxGeometry(w,h,d,1,radius),material);
+    mesh.position.set(x,y,z);
+    mesh.receiveShadow = true;
+    mesh.castShadow = true;
+    room.add(mesh);
+    return mesh;
+  }
+  part(15,.22,14,0,-.095,0,wood);
+  part(8,.025,6,0,.022,0,felt,.007);
+  part(15,4.5,.35,0,2.25,-6.8,wall);
+  part(.35,3.9,13.7,-7.3,1.95,0,wall);
+  part(14.5,.23,.32,0,4.56,-6.55,steel);
+  for(const x of [-5.65,-3.38,-1.13,1.13,3.38,5.65]){
+    part(2.08,2.75,.86,x,1.49,-5.86,steel);
+    part(1.74,2.45,.076,x,1.50,-5.37,wood);
+    part(.085,.34,.08,x+.62,1.47,-5.28,steel);
+    part(1.68,.065,.08,x,2.57,-5.27,light,.02);
+  }
+  for (const x of [-4.6,4.6]) {
+    part(3.86,.21,1.24,x,.58,-2.8,wood);
+    for(const leg of [-1.55,1.55])part(.13,.51,1.04,x+leg,.28,-2.8,steel);
+  }
+  part(2.65,.15,1.02,0,1.15,-.2,wood);
+  part(.28,1.15,.54,0,.57,-.2,steel);
+  const roomLight=new THREE.PointLight('#ffdc9f',110,17,2);
+  roomLight.position.set(0,5,-3);
+  room.add(roomLight);
+  room.visible=false;
+  return room;
 }

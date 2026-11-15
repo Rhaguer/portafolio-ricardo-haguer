@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import * as CANNON from 'cannon-es';
 import {PlayerAvatar} from './avatar.js';
-import { addAtmosphere, addGrandstands, addTunnel, contactShadow, createRenderer, roundedArch, turfMaterial } from './stadium.js';
+import {createDefense} from './defense.js';
+import { addAtmosphere, addGrandstands, addLockerRoom, addTunnel, contactShadow, createRenderer, turfMaterial } from './stadium.js';
 const GREEN='#203731',GOLD='#FFB612';
-export async function createGame({container,projects,onOpen,onProject,onZone,onTouchdown,onFailure,onQuality=()=>{}}){
+export async function createGame({container,projects,onOpen,onProject,onZone,onTouchdown,onFailure,onStatus=()=>{},onRoom=()=>{},onQuality=()=>{}}){
  const scene = new THREE.Scene();
  const compact = matchMedia('(pointer: coarse)').matches;
  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -34,7 +34,7 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  function cylinder(radius,height,color,x,y,z,parent=scene){const m=new THREE.Mesh(new THREE.CylinderGeometry(radius,radius,height,12),material(color));m.position.set(x,y,z);m.castShadow=true;parent.add(m);return m}
  function textTexture(text,{bg=GREEN,color='#ffffff',width=1024,height=160,size=70}={}){const c=document.createElement('canvas');c.width=width;c.height=height;const ctx=c.getContext('2d');if(bg){ctx.fillStyle=bg;ctx.fillRect(0,0,width,height);}ctx.fillStyle=color;ctx.font=`800 ${size}px Arial`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,width/2,height/2,width-35);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t}
  function sign(text,x,y,z,w=10,h=1.5,color='#fff'){const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:textTexture(text,{color}),side:THREE.DoubleSide}));mesh.position.set(x,y,z);scene.add(mesh);return mesh}
- function groundText(text,x,z,w=10,h=4,color='#fff',bg=null){const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:textTexture(text,{color,bg}),side:THREE.DoubleSide}));m.rotation.x=-Math.PI/2;m.position.set(x,.065,z);scene.add(m);return m}
+ function groundText(text,x,z,w=10,h=4,color='#fff',bg=null){const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:textTexture(text,{color,bg}),side:THREE.DoubleSide,transparent:!bg,depthWrite:!!bg}));m.rotation.x=-Math.PI/2;m.position.set(x,.065,z);scene.add(m);return m}
  const plaza = new THREE.Mesh(new THREE.CircleGeometry(1, 96),
    new THREE.MeshStandardMaterial({color:'#738079',roughness:.96}));
  plaza.rotation.x=-Math.PI/2;
@@ -62,26 +62,39 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  const lamps=[];for(const x of [-43,43])for(const z of [-64,64]){const flood=new THREE.SpotLight('#fff7d6',1900,72,.64,.65,2);flood.position.set(x,20,z);flood.target.position.set(x*.40,0,z*.42);scene.add(flood,flood.target);cylinder(.22,20,'#627568',x,10,z);for(let i=0;i<6;i++)lamps.push({x:x+(i%3-1)*.95,y:20+Math.floor(i/3)*.75,z,sx:.8,sy:.55,sz:.6});}instances(lamps,new THREE.BoxGeometry(1,1,1),new THREE.MeshStandardMaterial({color:'#fff8d3',emissive:'#fff1a0',emissiveIntensity:1}));
  // Tunnel and profile mat.
  addTunnel(scene);
- box(7,.06,5,'#9b8c4d',-29,.1,-1);
- const tunnelSign=sign('PERFIL & EXPERIENCIA',-32.1,4.35,-1,8.2,1.05,GOLD);
+ const tunnelSign=sign('PERFIL  /  CAMARÍN',-32.24,3.65,-1,7.5,.87,GOLD);
  tunnelSign.rotation.y=Math.PI/2;
+ const lockerCenter = new THREE.Vector3(-48,0,-1);
+ const locker = addLockerRoom(scene,lockerCenter);
+ const lockerSign=sign('CAMARÍN  /  CONTACTO',0,3.7,-6.57,11.5,1.15,GOLD);
+ locker.add(lockerSign);
  const playerShadow = contactShadow(scene);
  for (const z of [-59,59]) {
    const shadow = contactShadow(scene);
    shadow.position.set(0,.073,z);
    shadow.scale.set(1.66,.71,1);
  }
- const world=new CANNON.World({gravity:new CANNON.Vec3(0,-16,0)});world.broadphase=new CANNON.SAPBroadphase(world);world.allowSleep=true;const floor=new CANNON.Body({mass:0,shape:new CANNON.Plane()});floor.quaternion.setFromEuler(-Math.PI/2,0,0);world.addBody(floor);
- const player=new PlayerAvatar();player.root.position.set(-25,0,-1);player.root.rotation.y=Math.PI/2;scene.add(player.root);player.loadOptional();const playerBody=new CANNON.Body({mass:0,type:CANNON.Body.KINEMATIC,shape:new CANNON.Sphere(.8)});playerBody.position.set(-25,1,-1);world.addBody(playerBody);
+ const player=new PlayerAvatar();
+ player.root.position.set(-25,0,-1);
+ player.root.rotation.y=Math.PI/2;
+ scene.add(player.root);
+ player.loadOptional();
  const zones=[{x:-22,z:-52,label:'Aplicaciones web',kind:'Desarrollo web',portal:true},{x:22,z:-52,label:'Automatización',kind:'Automatización',portal:true},{x:-22,z:52,label:'Datos e IoT',kind:'IoT y datos',portal:true},{x:22,z:52,label:'Móvil',kind:'Aplicaciones móviles',portal:true},{x:-29,z:-1,label:'Perfil & experiencia',kind:'profile'},{x:29,z:0,label:'Stack & metodología',kind:'skills'},{x:0,z:57,label:'Contacto & GitHub',kind:'contact'}];
  for (const zone of zones.filter(z => z.portal)) {
-   const arch = roundedArch(zone.x, zone.z);
-   const label = sign(zone.label.toUpperCase(), zone.x, 6.15, zone.z, 11.3, 1.2, GOLD);
-   zone.features = [arch, label];
-   scene.add(arch);
-   groundText('TOUCHDOWN', zone.x, zone.z, 7, 1.5, GOLD);
+   const side=Math.sign(zone.z);
+   const panelZ=side*62.4;
+   box(21,1.40,.55,'#203b35',zone.x,1.28,panelZ);
+   box(21,.12,.6,'#799084',zone.x,.58,panelZ);
+   const label=sign(zone.label.toUpperCase(),zone.x,1.3,panelZ-side*.29,19.4,1.18,'#e0e9df');
+   label.rotation.y=side>0?Math.PI:0;
+   zone.features=[label];
  }
- const goalSensors=[];for(const z of [-59,59]){cylinder(.18,4,GOLD,0,2,z);const bar=cylinder(.15,11,GOLD,0,4,z);bar.rotation.z=Math.PI/2;for(const x of [-5.5,5.5])cylinder(.13,5,GOLD,x,6.5,z);const sensor=new CANNON.Body({mass:0,shape:new CANNON.Box(new CANNON.Vec3(5.5,4,1)),isTrigger:true});sensor.position.set(0,4,z);world.addBody(sensor);goalSensors.push(sensor);if(z>0)sensor.addEventListener('collide',event=>{if(event.body===playerBody&&!paused&&!flight&&zoneLock!==zones[6]){zoneLock=zones[6];onOpen('contact')}})}sign('CONTACTO & GITHUB',0,10,59,16,1.5,GOLD);
+ for(const z of [-59,59]){
+   cylinder(.18,4,GOLD,0,2,z);
+   const bar=cylinder(.15,11,GOLD,0,4,z);
+   bar.rotation.z=Math.PI/2;
+   for(const x of [-5.5,5.5])cylinder(.13,5,GOLD,x,6.5,z);
+ }
  const scoreboardSupport = new THREE.Group();
  scene.add(scoreboardSupport);
  for (const x of [-13,13]) {
@@ -92,11 +105,14 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  let scoreboardTexture;const boardCanvas=document.createElement('canvas');boardCanvas.width=1536;boardCanvas.height=640;const boardCtx=boardCanvas.getContext('2d');scoreboardTexture=new THREE.CanvasTexture(boardCanvas);scoreboardTexture.colorSpace=THREE.SRGBColorSpace;
  box(33,11,1,GREEN,0,13,-69);const board=new THREE.Mesh(new THREE.PlaneGeometry(31,9.6),new THREE.MeshBasicMaterial({map:scoreboardTexture}));board.position.set(0,13,-68.4);scene.add(board);for(const x of [-13,13])cylinder(.4,10,GREEN,x,5,-69);
  function score(label,flash=false){boardCtx.fillStyle=flash?GOLD:'#10251d';boardCtx.fillRect(0,0,1536,640);boardCtx.strokeStyle=GOLD;boardCtx.lineWidth=10;boardCtx.strokeRect(12,12,1512,616);boardCtx.textAlign='center';boardCtx.fillStyle=flash?GREEN:GOLD;boardCtx.font='bold 64px Arial';boardCtx.fillText('RICARDO HAGUER',768,140);boardCtx.font='32px Arial';boardCtx.fillText('SOFTWARE & AUTOMATIZACIÓN',768,215);boardCtx.fillStyle=flash?GREEN:'#ffffff';boardCtx.font='bold 42px Arial';boardCtx.fillText(`${projects.length} REPOSITORIOS · 4 ÁREAS · INACAP`,768,345);boardCtx.font='40px Arial';boardCtx.fillText(label.toUpperCase(),768,485);boardCtx.font='24px Arial';boardCtx.fillText('DEL PROBLEMA A LA IMPLEMENTACIÓN',768,572);scoreboardTexture.needsUpdate=true}score('Bienvenido al campo');
- // Dynamic footballs and cheese wedges.
- const props=[];for(let i=0;i<12;i++){let cheese=i%2===0,mesh;if(cheese){const s=new THREE.Shape();s.moveTo(-.7,-.4);s.lineTo(.7,-.4);s.lineTo(0,.7);s.closePath();mesh=new THREE.Mesh(new THREE.ExtrudeGeometry(s,{depth:.45,bevelEnabled:false}),material(GOLD));mesh.geometry.rotateX(-Math.PI/2);mesh.geometry.center();}else{mesh=new THREE.Mesh(new THREE.SphereGeometry(.4,12,8),material('#6B3E26'));mesh.scale.z=1.65;const stitch=new THREE.Mesh(new THREE.BoxGeometry(.045,.05,.45),material('#ffffff'));stitch.position.y=.38;mesh.add(stitch)}mesh.castShadow=true;scene.add(mesh);const body=new CANNON.Body({mass:cheese?1:.6,shape:cheese?new CANNON.Box(new CANNON.Vec3(.65,.3,.6)):new CANNON.Sphere(.4),linearDamping:.35,angularDamping:.4});body.position.set(-15+(i%4)*10,1,-30+Math.floor(i/4)*25);world.addBody(body);props.push({mesh,body})}
- const dummyLabels=['Python & Django','JS / TypeScript','n8n & Integración','SQL & Power BI','.NET MAUI & Kotlin','Wazuh / SGSI / MITRE'];const dummies=dummyLabels.map((label,i)=>{const group=new THREE.Group();group.position.set(29,0,-25+i*10);scene.add(group);cylinder(.9,.3,GREEN,0,.15,0,group);cylinder(.55,2,GOLD,0,1.3,0,group);box(1.6,.35,.5,GREEN,0,2,0,group);const labelMesh=sign(label,30,3.6,-25+i*10,10,1.15,GOLD);labelMesh.rotation.y=-Math.PI/2;return {group,velocity:0,angle:0}});
- // Four representative projects, preserving the editorial featured choices.
- const featured=projects.filter(p=>p.featured);for(const p of projects)if(featured.length<4&&!featured.includes(p))featured.push(p);const targets=featured.slice(0,4).map((p,i)=>{const x=i%2?13:-13,z=[-28.8,-9.6,9.6,28.8][i];const ring=new THREE.Mesh(new THREE.RingGeometry(3.5,3.65,48),new THREE.MeshBasicMaterial({color:GOLD,side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;ring.position.set(x,.08,z);scene.add(ring);const holo=new THREE.Mesh(new THREE.CapsuleGeometry(.5,1.2,4,8),new THREE.MeshStandardMaterial({color:'#89f6cb',emissive:'#2c9671',transparent:true,opacity:.55,wireframe:true}));holo.position.set(x,1.6,z);scene.add(holo);const label=sign(`${i+1} · ${p.title}`,x,3.5,z,12,1.1,GOLD);return {x,z,p,holo,label,ring}});
+ // Flush numbered markers keep the receivers easy to find while leaving the field clear.
+ const featured=projects.filter(p=>p.featured);
+ for(const p of projects)if(featured.length<4&&!featured.includes(p))featured.push(p);
+ const targets=featured.slice(0,4).map((p,i)=>{
+   const x=i%2?13:-13,z=[-28.8,-9.6,9.6,28.8][i];
+   const marker=groundText(String(i+1),x,z,2.1,2.2,'#e5f5e9');
+   return {x,z,p,marker};
+ });
  const snowCount=320;
  const snowflakes=Array.from({length:snowCount},()=>({x:(Math.random()-.5)*90,y:Math.random()*35,z:(Math.random()-.5)*140}));
  const snow=instances(snowflakes,new THREE.OctahedronGeometry(.105),new THREE.MeshBasicMaterial({color:'#ffffff',transparent:true,opacity:.76,depthWrite:false}));
@@ -105,10 +121,59 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  confetti.frustumCulled=false;confetti.receiveShadow=false;confetti.visible=false;
  let muted=true,audio=null,paused=false,hidden=false,current=null,lastInteraction='',zoneLock=null,flight=null,zoom=0,elapsed=0,celebration=null,mapOpen=false;
  let cameraYaw=.535,cameraPitch=.48;
+ let inLocker=false, playerStun=0, defenderWarning=false;
+ const savedPosition=new THREE.Vector3();
+ let savedHeading=0;
+ const hiddenAtRoom=[];
+ const defense=createDefense(scene,()=>{
+   playerStun=.8;
+   motion.set(0,0);
+   if(flight&&!flight.released){
+     scene.remove(flight.ball);
+     player.recoverBall();
+     player.throwTime=0;
+     flight=null;
+   }
+   onStatus('Tackle. Vuelve a moverte para seguir la jugada.');
+ });
+ function visitLocker() {
+   if(inLocker)return;
+   savedPosition.copy(player.root.position);
+   savedHeading=player.root.rotation.y;
+   clearInput();
+   motion.set(0,0);
+   playerStun=0;
+   if(flight){scene.remove(flight.ball);flight=null;player.recoverBall();player.throwTime=0;}
+   player.root.position.copy(lockerCenter).add(new THREE.Vector3(0,0,1.9));
+   player.root.rotation.y=0;
+   player.model.rotation.set(0,0,0);
+   inLocker=true;
+   mapOpen=false;
+   locker.visible=true;
+   for(const object of scene.children){
+     if(!object.visible||object===locker||object===player.root||object===playerShadow||object.isLight||object.name==='Cielo')continue;
+     hiddenAtRoom.push(object);
+     object.visible=false;
+   }
+   onRoom(true);
+   onZone('Camarín','Abre la tarjeta de contacto o vuelve al campo.','Abrir contacto');
+ }
+ function leaveLocker() {
+   if(!inLocker)return;
+   player.root.position.copy(savedPosition);
+   inLocker=false;
+   locker.visible=false;
+   player.root.rotation.y=savedHeading;
+   for(const object of hiddenAtRoom)object.visible=true;
+   hiddenAtRoom.length=0;
+   lastInteraction='';
+   zoneLock=zones[6];
+   onRoom(false);
+ }
  const defaultYaw=cameraYaw,defaultPitch=cameraPitch;
  const motion=new THREE.Vector2();
  const nearMarker = new THREE.Mesh(new THREE.RingGeometry(.8,1,38),
-   new THREE.MeshBasicMaterial({color:'#ffd064',side:THREE.DoubleSide,transparent:true,depthWrite:false}));
+   new THREE.MeshBasicMaterial({color:'#dff5e8',side:THREE.DoubleSide,transparent:true,depthWrite:false}));
  nearMarker.rotation.x=-Math.PI/2;
  nearMarker.visible=false;
  scene.add(nearMarker);
@@ -160,7 +225,6 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  const tangent = new THREE.Vector3();
  function launch(target) {
    if(flight||celebration)return;
-   const kick=!target&&current?.kind==='contact';
    const ball=new THREE.Group();
    const leather=new THREE.Mesh(ballGeometry,material('#77472e'));
    leather.scale.set(.152,.152,.262);
@@ -175,7 +239,7 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
    ball.visible=false;
    scene.add(ball);
    player.throw();
-   flight={ball,from:new THREE.Vector3(),to:new THREE.Vector3(),time:0,target,kick,released:false};
+   flight={ball,from:new THREE.Vector3(),to:new THREE.Vector3(),time:0,target,released:false};
  }
 
  function receiverNear(pos) {
@@ -189,10 +253,11 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  }
 
  function action(enter=false) {
-   if(paused||celebration||flight)return;
+   if(paused||celebration||flight||playerStun>0)return;
+   if(inLocker){onOpen('contact');return;}
    if(current){
      if(current.portal)touchdown(current);
-     else if(current.kind==='contact'&&!enter)launch(null);
+     else if(current.kind==='contact'){zoneLock=current;visitLocker();}
      else{zoneLock=current;onOpen(current.kind);}
      return;
    }
@@ -204,9 +269,7 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  const clickTargets = new Map();
  for (const zone of zones) for (const mesh of zone.features || []) clickTargets.set(mesh, {zone});
  for (const target of targets) {
-   clickTargets.set(target.holo, {target});
-   clickTargets.set(target.label, {target});
-   clickTargets.set(target.ring, {target});
+   clickTargets.set(target.marker, {target});
  }
  const clickMeshes = [...clickTargets.keys()];
  const intersections = [];
@@ -246,7 +309,7 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
    const didDrag=drag?.id===event.pointerId&&drag.distance>6;
    drag=null;
    canvas.style.cursor='grab';
-   if(didDrag||paused||celebration)return;
+   if(didDrag||paused||celebration||inLocker)return;
    const hit=pick(event);
    if(hit?.zone){onOpen(hit.zone.kind);return;}
    if(!hit?.target)return;
@@ -256,7 +319,7 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  });
  function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)}window.addEventListener('resize',resize);
  const zero=new THREE.Vector2(),direction=new THREE.Vector2(),cameraOffset=new THREE.Vector3(),desired=new THREE.Vector3(),lookAt=new THREE.Vector3(-25,1,-4),lookTarget=new THREE.Vector3();
- let prev=performance.now();function frame(now){requestAnimationFrame(frame);const realDelta=(now-prev)/1000;const dt=THREE.MathUtils.clamp(realDelta,0,.04);prev=now;if(hidden||paused)return;measureQuality(realDelta);elapsed+=dt;const pos=player.root.position;let moving=0;const sprint=key.has('ShiftLeft')||key.has('ShiftRight');if(!paused&&!celebration){const dx=(key.has('KeyD')||key.has('ArrowRight')?1:0)-(key.has('KeyA')||key.has('ArrowLeft')?1:0)+stick.x;const dz=(key.has('KeyS')||key.has('ArrowDown')?1:0)-(key.has('KeyW')||key.has('ArrowUp')?1:0)+stick.y;const dir=direction.set(dx,dz);if(dir.length()>1)dir.normalize();
+ let prev=performance.now();function frame(now){requestAnimationFrame(frame);const realDelta=(now-prev)/1000;const dt=THREE.MathUtils.clamp(realDelta,0,.04);prev=now;if(hidden||paused)return;measureQuality(realDelta);elapsed+=dt;const pos=player.root.position;playerStun=Math.max(0,playerStun-dt);let moving=0;const sprint=key.has('ShiftLeft')||key.has('ShiftRight');if(!inLocker&&!celebration&&!playerStun){const dx=(key.has('KeyD')||key.has('ArrowRight')?1:0)-(key.has('KeyA')||key.has('ArrowLeft')?1:0)+stick.x;const dz=(key.has('KeyS')||key.has('ArrowDown')?1:0)-(key.has('KeyW')||key.has('ArrowUp')?1:0)+stick.y;const dir=direction.set(dx,dz);if(dir.length()>1)dir.normalize();
  const viewYaw=mapOpen?0:cameraYaw;
  dir.rotateAround(zero,-viewYaw);
  motion.lerp(dir.multiplyScalar(sprint?14:8),1-Math.exp(-11*dt));
@@ -266,35 +329,47 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
    const angle=Math.atan2(motion.x,motion.y);
    if(!flight||flight.released)player.root.rotation.y+=Math.atan2(Math.sin(angle-player.root.rotation.y),Math.cos(angle-player.root.rotation.y))*(1-Math.exp(-14*dt));
    moving=1;
- }playerBody.velocity.set((pos.x-playerBody.position.x)/Math.max(dt,.001),0,(pos.z-playerBody.position.z)/Math.max(dt,.001));playerBody.position.set(pos.x,1,pos.z);world.step(1/60,dt,3);for(const p of props){p.mesh.position.copy(p.body.position);p.mesh.quaternion.copy(p.body.quaternion);if(Math.hypot(p.body.position.x-pos.x,p.body.position.z-pos.z)<1.5&&moving){p.body.wakeUp();if(p.body.velocity.length()<5)p.body.applyImpulse(new CANNON.Vec3(Math.sin(player.root.rotation.y)*2,.6,Math.cos(player.root.rotation.y)*2))}}for(const d of dummies){if(Math.hypot(pos.x-d.group.position.x,pos.z-d.group.position.z)<1.8&&moving)d.velocity+=dt*14;d.velocity+=(-18*d.angle-5*d.velocity)*dt;d.angle+=d.velocity*dt;d.group.rotation.z=-Math.min(d.angle,1.4)}current=zones.find(z=>Math.hypot(pos.x-z.x,pos.z-z.z)<(z.portal?4.3:5));if(zoneLock&&Math.hypot(pos.x-zoneLock.x,pos.z-zoneLock.z)>7)zoneLock=null;const receiver=receiverNear(pos);
+ }
+ let warning=defense.update(dt,pos,motion,Math.abs(pos.x)<26&&Math.abs(pos.z)<43,reducedMotion);
+ if(warning&&!defenderWarning&&!playerStun)onStatus('¡Defensor cerca! Cambia de dirección o acelera.');
+ defenderWarning=warning;
+ current=zones.find(z=>Math.hypot(pos.x-z.x,pos.z-z.z)<(z.portal?4.3:5));
+ if(zoneLock&&Math.hypot(pos.x-zoneLock.x,pos.z-zoneLock.z)>7)zoneLock=null;
+ const receiver=receiverNear(pos);
  const interaction=current||receiver;
- nearMarker.visible=Boolean(interaction);
+ nearMarker.visible=!inLocker&&Boolean(interaction);
  if(interaction)nearMarker.position.set(interaction.x,.086,interaction.z);
- const actionText=current?.portal?'Ver proyectos':current?.kind==='contact'?'Patear':current?'Abrir panel':receiver?'Pasar al receptor':'Pasar';
+ const actionText=current?.portal?'Ver proyectos':current?.kind==='contact'?'Ir al camarín':current?'Abrir panel':receiver?'Pasar al receptor':'Pasar';
  const label=current?.label||receiver?.p.title||'Centro del campo';
  const interactionKey=label+':'+actionText;
  if(interactionKey!==lastInteraction){
    onZone(label,receiver&&!current?'Enter: abrir ficha · Espacio: pasar':current?'Enter: abrir · Espacio: acción':'Toca o haz clic en un portal o receptor',actionText);
    score(interaction?label:'Explora los proyectos');
    lastInteraction=interactionKey;
- }if(current?.portal&&current!==zoneLock&&!flight)touchdown(current);if(current?.kind==='profile'&&current!==zoneLock&&moving&&Math.hypot(pos.x-current.x,pos.z-current.z)<3){zoneLock=current;onOpen('profile')}if(current?.kind==='contact'&&current!==zoneLock&&pos.z>56&&!flight){zoneLock=current;onOpen('contact')}}
+ }if(current?.portal&&current!==zoneLock&&!flight)touchdown(current);if(current?.kind==='profile'&&current!==zoneLock&&moving&&Math.hypot(pos.x-current.x,pos.z-current.z)<3){zoneLock=current;onOpen('profile')}if(current?.kind==='contact'&&current!==zoneLock&&pos.z>56&&!flight){zoneLock=current;visitLocker()}}
+ if(inLocker)nearMarker.visible=false;
  player.update(dt,moving,sprint);
+ if(playerStun>0){
+   const fall=Math.min(1,(.8-playerStun)*7,playerStun*4);
+   player.model.rotation.x=-fall*1.27;
+   player.model.position.y=-fall*.23;
+ }
+ if(player.external&&playerStun>0)player.external.rotation.x=player.model.rotation.x;
+ else if(player.external)player.external.rotation.x=0;
  playerShadow.position.set(pos.x,.082,pos.z);
  playerShadow.material.opacity= .62-Math.min(player.model.position.y,.5)*.36;
  if(flight){
    flight.time+=dt;
    if(!flight.released&&flight.time>=.22) {
-     if(flight.kick)flight.from.copy(pos).y=.32;
-     else player.releaseBall(flight.from);
+     player.releaseBall(flight.from);
      if(flight.target)flight.to.set(flight.target.x,1.8,flight.target.z);
-     else if(flight.kick)flight.to.set(0,4.5,62);
      else flight.to.copy(flight.from).add(new THREE.Vector3(Math.sin(player.root.rotation.y)*15,0,Math.cos(player.root.rotation.y)*15)).y=.18;
      flight.ball.visible=true;
      flight.released=true;
    }
    if(flight.released){
      const t= Math.min(1,(flight.time-.22)/.90);
-     const arc=flight.kick?7:3.6;
+     const arc=3.6;
      flight.ball.position.lerpVectors(flight.from,flight.to,t);
      flight.ball.position.y+=4*t*(1-t)*arc;
      tangent.subVectors(flight.to,flight.from);
@@ -302,26 +377,26 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
      flight.ball.quaternion.setFromUnitVectors(axis,tangent.normalize());
      flight.ball.rotateZ(t*26);
      if(t===1){
-       const {target,kick,ball}=flight;
+       const {target,ball}=flight;
        scene.remove(ball);
        player.recoverBall();
        flight=null;
        if(target)onProject(target.p);
-       else if(kick){zoneLock=zones[6];onOpen('contact');}
      }
    }
  }
- if(confettiTime>0){confettiTime-=dt;confettiItems.forEach((p,i)=>{confettiVel[i].y-=12*dt;p.x+=confettiVel[i].x*dt;p.y+=confettiVel[i].y*dt;p.z+=confettiVel[i].z*dt;temp.position.set(p.x,p.y,p.z);temp.scale.set(1,1,1);temp.rotation.set(elapsed*i,0,elapsed*2);temp.updateMatrix();confetti.setMatrixAt(i,temp.matrix)});confetti.instanceMatrix.needsUpdate=true;confetti.visible=true}else confetti.visible=false;
- if(snow.visible&&!paused){for(let i=0;i<snow.count;i++){const flake=snowflakes[i];flake.x+=.18*dt;flake.y-=2*dt;if(flake.y<0)flake.y=35;temp.position.set(flake.x,flake.y,flake.z);temp.scale.setScalar(i%5*.16+.6);temp.rotation.set(elapsed*.4,i,0);temp.updateMatrix();snow.setMatrixAt(i,temp.matrix)}snow.instanceMatrix.needsUpdate=true}for(const t of targets)t.holo.rotation.y+=dt*.5;
+ if(!inLocker&&confettiTime>0){confettiTime-=dt;confettiItems.forEach((p,i)=>{confettiVel[i].y-=12*dt;p.x+=confettiVel[i].x*dt;p.y+=confettiVel[i].y*dt;p.z+=confettiVel[i].z*dt;temp.position.set(p.x,p.y,p.z);temp.scale.set(1,1,1);temp.rotation.set(elapsed*i,0,elapsed*2);temp.updateMatrix();confetti.setMatrixAt(i,temp.matrix)});confetti.instanceMatrix.needsUpdate=true;confetti.visible=true}else confetti.visible=false;
+ if(!inLocker&&snow.visible&&!paused){for(let i=0;i<snow.count;i++){const flake=snowflakes[i];flake.x+=.18*dt;flake.y-=2*dt;if(flake.y<0)flake.y=35;temp.position.set(flake.x,flake.y,flake.z);temp.scale.setScalar(i%5*.16+.6);temp.rotation.set(elapsed*.4,i,0);temp.updateMatrix();snow.setMatrixAt(i,temp.matrix)}snow.instanceMatrix.needsUpdate=true}
  zoom=Math.max(0,zoom-dt);
  const distance=zoom>0?.80:1;
  const radius=26*distance;
  cameraOffset.set(Math.sin(cameraYaw)*Math.cos(cameraPitch)*radius,
    Math.sin(cameraPitch)*radius,Math.cos(cameraYaw)*Math.cos(cameraPitch)*radius);
  if(innerWidth<700)cameraOffset.multiplyScalar(1.22);
- if(mapOpen){desired.set(Math.sin(cameraYaw-defaultYaw)*65,innerWidth<700?174:128,innerWidth<700?39:48);lookTarget.set(0,0,0);}
+ if(inLocker){desired.copy(lockerCenter).add(new THREE.Vector3(5.2,4.1,9.65));lookTarget.copy(lockerCenter).add(new THREE.Vector3(0,1.6,-2.8));}
+ else if(mapOpen){desired.set(Math.sin(cameraYaw-defaultYaw)*65,innerWidth<700?174:128,innerWidth<700?39:48);lookTarget.set(0,0,0);}
  else {desired.copy(pos).add(cameraOffset);lookTarget.set(pos.x,1.1,pos.z-3);}
- const blend=reducedMotion?1:1-Math.exp(-4.2*dt);
+ const blend=reducedMotion?1:1-Math.exp(-(inLocker?6:4.2)*dt);
  camera.position.lerp(desired,blend);
  lookAt.lerp(lookTarget,blend);
  camera.lookAt(lookAt);
@@ -330,5 +405,5 @@ export async function createGame({container,projects,onOpen,onProject,onZone,onT
  applyDetail(detail);
  requestAnimationFrame(frame);
  const initialSnow=document.getElementById('snow');initialSnow.setAttribute('aria-pressed',snow.visible);initialSnow.textContent='Nieve: '+(snow.visible?'sí':'no');
- return{backend,action,setQuality,centerCamera(){cameraYaw=defaultYaw;cameraPitch=defaultPitch},toggleMap(){mapOpen=!mapOpen;return mapOpen},pause(value){paused=value;clearInput();motion.set(0,0);drag=null;},toggleSnow(){snowEnabled=!snowEnabled;syncSnow();return snowEnabled},toggleSound(){muted=!muted;if(!muted){if(audioContext){audio??=new audioContext();audio.resume().catch(()=>{})}}return !muted}};
+ return{backend,action,setQuality,visitLocker,leaveLocker,get inLocker(){return inLocker},centerCamera(){cameraYaw=defaultYaw;cameraPitch=defaultPitch},toggleMap(){if(inLocker)return false;mapOpen=!mapOpen;return mapOpen},pause(value){paused=value;clearInput();motion.set(0,0);drag=null;},toggleSnow(){snowEnabled=!snowEnabled;syncSnow();return snowEnabled},toggleSound(){muted=!muted;if(!muted){if(audioContext){audio??=new audioContext();audio.resume().catch(()=>{})}}return !muted}};
 }

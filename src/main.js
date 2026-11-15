@@ -6,9 +6,40 @@ const normalize=v=>v.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase
 let projects=[],catalogError=false,game=null,returnFocus=null;
 const repositoryLink = p => `<a href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">Ver repositorio en GitHub ↗</a><p class="repo-note">Repositorio privado. GitHub requiere acceso autorizado.</p>`;
 const catalog=fetch('./projects.json').then(r=>{if(!r.ok)throw Error('Catálogo no disponible');return r.json()}).then(data=>{projects=data;return data}).catch(()=>{catalogError=true;return []});
-const tags=p=>`<div class="tags">${p.tech.map(t=>`<span>${esc(t)}</span>`).join('')}</div>`;
-function show(html){const panel=$('panel');if(!panel.open)returnFocus=document.activeElement;$('panel-content').innerHTML=html;if(!panel.open)panel.showModal();else $('close').focus();panel.scrollTop=0;game?.pause(true)}
-function project(p, fromTour = false){if(!p)return;show(`${fromTour ? '<button class="back-projects" data-tour-return type="button">← Volver al recorrido</button>' : lastListing ? '<button class="back-projects" data-back-projects type="button">← Volver a proyectos</button>' : ''}<p class="eyebrow">${esc(p.category)} / ${esc(p.status)}</p><h2 id="panel-title">${esc(p.title)}</h2><img class="project-image" src="${esc(p.image)}" alt="Ilustración conceptual de ${esc(p.title)}"><p>Ilustración conceptual; no es una captura de la aplicación.</p><p>${esc(p.summary)}</p>${tags(p)}<div class="profile-grid"><section><h3>El problema</h3><p>${esc(p.problem)}</p></section><section><h3>La propuesta</h3><p>${esc(p.solution)}</p></section><section><h3>Evidencia</h3><p>${esc(p.evidence)}</p></section><section><h3>Estado y alcance</h3><p>${esc(p.limit)}</p></section></div>${repositoryLink(p)}`)}
+const tags = p => `<div class="tags" aria-label="Tecnologías">${p.tech.map(t => `<button type="button" class="tech-pill" data-tech="${esc(t)}">${esc(t)}</button>`).join('')}</div>`;
+function show(html) {
+  const panel=$('panel');
+  if(!panel.open)returnFocus=document.activeElement;
+  $('panel-content').innerHTML=html;
+  if(!panel.open)panel.showModal();
+  else ($('panel-title')?.matches('[tabindex]')?$('panel-title'):$('close')).focus({preventScroll:true});
+  panel.scrollTop=0;
+  game?.pause(true);
+}
+function project(p, fromTour = false) {
+  if(!p)return;
+  const back=fromTour
+    ? '<button class="back-projects" data-tour-return type="button">← Volver al recorrido</button>'
+    : lastListing ? '<button class="back-projects" data-back-projects type="button">← Volver a proyectos</button>' : '';
+  show(`${back}<article class="case-study">
+    <div class="case-hero">
+      <div>
+        <p class="eyebrow">${esc(categoryLabels[p.category])} · ${esc(p.status)}</p>
+        <h2 id="panel-title" tabindex="-1">${esc(p.title)}</h2>
+        <p>${esc(p.summary)}</p>
+      </div>
+      <figure><img src="${esc(p.image)}" alt="" width="640" height="380"><figcaption>Ilustración del proyecto</figcaption></figure>
+    </div>
+    <section class="case-stack"><h3>Tecnologías</h3>${tags(p)}<p>Selecciona una tecnología para encontrar otros proyectos que la usan.</p></section>
+    <div class="case-details">
+      <section><h3>El problema</h3><p>${esc(p.problem)}</p></section>
+      <section><h3>La solución</h3><p>${esc(p.solution)}</p></section>
+      <section><h3>Evidencia</h3><p>${esc(p.evidence)}</p></section>
+      <section><h3>Estado y alcance</h3><p>${esc(p.limit)}</p></section>
+    </div>
+    <footer class="case-footer">${repositoryLink(p)}</footer>
+  </article>`);
+}
 const categoryLabels = {
   'Desarrollo web': 'Web',
   'Automatización': 'Automatización',
@@ -19,7 +50,7 @@ let lastListing;
 function listing(category = '', query = '') {
   let activeCategory = category || '';
   const filters = [['', 'Todos'], ...Object.entries(categoryLabels)];
-  show(`<h2 id="panel-title">Proyectos</h2>
+  show(`<h2 id="panel-title" tabindex="-1">Proyectos</h2>
     <label for="project-search">Buscar por nombre o tecnología</label>
     <input type="search" id="project-search" placeholder="Python, automatización, Django…">
     <div class="catalog-filters" role="group" aria-label="Filtrar proyectos por categoría">
@@ -69,7 +100,18 @@ $('home-projects').addEventListener('click', e => {
   const card = e.target.closest('[data-home-project]');
   if (card) { lastListing = null; project(projects.find(p => p.repo === card.dataset.homeProject)); }
 });
-function open(kind){if(kind==='profile')show(`<p class="eyebrow">02 / PERFIL PROFESIONAL · SANTIAGO, CHILE</p><h2 id="panel-title">Ricardo Haguer</h2><p>Software, datos y automatización. Conecto aplicaciones, información y dispositivos para resolver problemas concretos.</p><p>Estudiante de Ingeniería en Informática en INACAP Puente Alto. Durante mi práctica profesional en Eknow trabajé en automatización, análisis de datos y seguimiento de riesgos de seguridad de la información.</p><div class="profile-grid"><section><h3>Desarrollo de software</h3><p>Python, Django, JavaScript, TypeScript, C#, .NET MAUI y Kotlin.</p></section><section><h3>Datos e integración</h3><p>SQL, PostgreSQL, SQLite, Power BI, n8n e integración con dispositivos e IoT.</p></section><section><h3>Seguridad como criterio</h3><p>SGSI, Wazuh, CIS Controls, MITRE ATT&CK, permisos, auditoría y trazabilidad.</p></section></div><button class="primary" id="print">Imprimir Perfil / CV</button>`);else if(kind==='skills')show(`<p class="eyebrow">03 / FORMA DE TRABAJAR</p><h2 id="panel-title">Entender. Construir. Verificar.</h2><h3>01 Contexto · Partir del problema</h3><p>Identificar quién usa la solución, qué necesita y qué restricciones tiene.</p><h3>02 Implementación · Conectar las piezas</h3><p>Diseñar interfaces, servicios y datos con responsabilidades claras.</p><h3>03 Evidencia · Mostrar lo comprobable</h3><p>Documentar el código, las pruebas y las limitaciones de cada proyecto.</p>`);else if(kind==='contact')show(`<p class="eyebrow">04 / CONTACTO & GITHUB</p><h2 id="panel-title">Conectemos ideas y tecnología.</h2><p>Interés en oportunidades de desarrollo de software, automatización e integración. Santiago, Chile.</p><div class="contact-buttons"><a href="https://github.com/Rhaguer" target="_blank" rel="noopener noreferrer">GitHub · @Rhaguer ↗</a><button id="copy">Copiar enlace del perfil</button></div><p id="copy-status" role="status"></p>`);else listing(kind==='all'?null:kind)}
+function open(kind){if(kind==='profile')show(`<p class="eyebrow">02 / PERFIL PROFESIONAL · SANTIAGO, CHILE</p><h2 id="panel-title">Ricardo Haguer</h2><p>Software, datos y automatización. Conecto aplicaciones, información y dispositivos para resolver problemas concretos.</p><p>Estudiante de Ingeniería en Informática en INACAP Puente Alto. Durante mi práctica profesional en Eknow trabajé en automatización, análisis de datos y seguimiento de riesgos de seguridad de la información.</p><div class="profile-grid"><section><h3>Desarrollo de software</h3><p>Python, Django, JavaScript, TypeScript, C#, .NET MAUI y Kotlin.</p></section><section><h3>Datos e integración</h3><p>SQL, PostgreSQL, SQLite, Power BI, n8n e integración con dispositivos e IoT.</p></section><section><h3>Seguridad como criterio</h3><p>SGSI, Wazuh, CIS Controls, MITRE ATT&CK, permisos, auditoría y trazabilidad.</p></section></div><button class="primary" id="print">Imprimir Perfil / CV</button>`);else if(kind==='skills')show(`<p class="eyebrow">03 / FORMA DE TRABAJAR</p><h2 id="panel-title">Entender. Construir. Verificar.</h2><h3>01 Contexto · Partir del problema</h3><p>Identificar quién usa la solución, qué necesita y qué restricciones tiene.</p><h3>02 Implementación · Conectar las piezas</h3><p>Diseñar interfaces, servicios y datos con responsabilidades claras.</p><h3>03 Evidencia · Mostrar lo comprobable</h3><p>Documentar el código, las pruebas y las limitaciones de cada proyecto.</p>`);else if(kind==='contact')show(`<section class="contact-card">
+    <div class="case-hero contact-hero"><div>
+      <p class="eyebrow">${game?.inLocker ? 'CAMARÍN · CONTACTO' : 'CONTACTO'}</p>
+      <h2 id="panel-title" tabindex="-1">Conectemos ideas y tecnología.</h2>
+      <p>Interés en oportunidades de desarrollo de software, automatización e integración. Santiago, Chile.</p>
+    </div></div>
+    <div class="contact-buttons">
+      <a href="https://github.com/Rhaguer" target="_blank" rel="noopener noreferrer">GitHub · @Rhaguer ↗</a>
+      <button id="copy" type="button">Copiar enlace del perfil</button>
+    </div>
+    <p id="copy-status" role="status"></p>
+  </section>`);else listing(kind==='all'?null:kind)}
 const tour = createTour({
   show,
   openProject: repo => project(projects.find(p => p.repo === repo), true),
@@ -84,25 +126,106 @@ $('panel-content').addEventListener('click', event => {
 });
 $('panel-content').addEventListener('click',async e=>{const b=e.target.closest('[data-project]');if(e.target.closest('[data-back-projects]')&&lastListing)listing(lastListing.category,lastListing.query);if(b)project(projects.find(p=>p.repo===b.dataset.project));if(e.target.id==='print')window.print();if(e.target.id==='copy'){try{await navigator.clipboard.writeText('https://github.com/Rhaguer');$('copy-status').textContent='Enlace copiado al portapapeles.'}catch{$('copy-status').textContent='Enlace del perfil: https://github.com/Rhaguer'}}});
 $('close').onclick=()=>$('panel').close();$('panel').addEventListener('close',()=>{game?.pause(false);returnFocus?.isConnected&&returnFocus.focus()});$('panel').addEventListener('click',e=>{if(e.target===$('panel')){const r=$('panel').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)$('panel').close()}});
+const menu=$('pause-menu');
+let menuAction;
+$('game-menu').onclick=()=>{
+  game.pause(true);
+  menu.showModal();
+};
+menu.addEventListener('close',()=>{
+  if(menuAction){
+    const action=menuAction;
+    menuAction=null;
+    action();
+  }
+  if(!$('panel').open){
+    game.pause(false);
+    $('world').focus({preventScroll:true});
+  }
+});
+function afterMenu(action){menuAction=action;menu.close();}
+const goToContact=()=>{
+  if(!game||game.inLocker){open('contact');return;}
+  game.visitLocker();
+  $('world').focus({preventScroll:true});
+};
+for(const button of document.querySelectorAll('[data-pause-open]')){
+  button.onclick=()=>afterMenu(()=>button.dataset.pauseOpen==='contact'?goToContact():open(button.dataset.pauseOpen));
+}
+$('pause-tour').onclick=()=>afterMenu(tour.start);
+$('leave-room').onclick=()=>{game.leaveLocker();$('world').focus({preventScroll:true});};
+$('panel-content').addEventListener('click',event=>{
+  const tech=event.target.closest('[data-tech]');
+  if(tech)listing('',tech.dataset.tech);
+});
+let statusClock;
+function status(message){
+  $('game-status').textContent=message;
+  clearTimeout(statusClock);
+  statusClock=setTimeout(()=>$('game-status').textContent='',2200);
+}
 document.querySelectorAll('[data-open]').forEach(b => b.onclick = async e => {
   if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
   e.preventDefault();
   if (b.dataset.open === 'all') await catalog;
-  open(b.dataset.open);
+  if(b.dataset.open==='contact')goToContact();
+  else open(b.dataset.open);
 });
-$('enter').onclick=async()=>{const b=$('enter');b.disabled=true;$('loading').textContent='Preparando el campo…';try{const [{createGame}]=await Promise.all([import('./scene.js'),catalog]);game=await createGame({container:$('world'),projects,onOpen:open,onProject:p=>{lastListing=null;project(p)},onFailure:()=>location.assign('./classic.html'),onZone:(label,hint,action)=>{
-   $('zone-label').textContent=label;
-   $('hint').textContent=hint;
-   $('interact').textContent=action;
-   $('touch-action').textContent=action;
- },onQuality:mode=>{$('graphics').textContent=`${game?.backend || ''} · ${mode==='light'?'Ligera':mode==='balanced'?'Equilibrada':'Alta'}`; },onTouchdown:()=>{$('announcement').textContent='TOUCHDOWN';setTimeout(()=>$('announcement').textContent='',1400)}});$('graphics').textContent=game.backend;
- $('quality').onchange=e=>game.setQuality(e.target.value);
- $('camera-center').onclick=()=>{game.centerCamera();$('world').focus({preventScroll:true});};
- $('map').onclick=()=>{
-   const active=game.toggleMap();
-   $('map').setAttribute('aria-pressed', active);
-   $('map').textContent=active?'Volver al campo':'Mapa';
- };
- game.setQuality($('quality').value);
- if($('panel').open)game.pause(true);
- $('welcome').hidden=true;$('play-hud').hidden=false;if(!$('panel').open)$('world').focus({preventScroll:true});$('interact').onclick=()=>game.action();$('snow').disabled=false;$('sound').disabled=false;$('touch-action').onclick=()=>game.action();$('snow').onclick=()=>{const enabled=game.toggleSnow();$('snow').setAttribute('aria-pressed',enabled);$('snow').textContent='Nieve: '+(enabled?'sí':'no')};$('sound').onclick=()=>{const enabled=game.toggleSound();$('sound').setAttribute('aria-pressed',enabled);$('sound').textContent='Sonido: '+(enabled?'sí':'no')};}catch(error){console.error(error);$('loading').textContent='El estadio 3D no está disponible en este navegador. Puedes explorar los proyectos aquí mismo.';b.disabled=false}};
+$('enter').onclick=async()=>{
+  const button=$('enter');
+  button.disabled=true;
+  $('loading').textContent='Preparando el campo…';
+  try{
+    const [{createGame}]=await Promise.all([import('./scene.js'),catalog]);
+    game=await createGame({
+      container:$('world'),projects,onOpen:open,
+      onProject:p=>{lastListing=null;project(p);},
+      onFailure:()=>location.assign('./classic.html'),
+      onStatus:status,
+      onRoom:inside=>{
+        $('leave-room').hidden=!inside;
+        $('joystick').hidden=inside;
+        $('hint').textContent=inside?'Consulta tus enlaces o vuelve al campo.':'';
+        $('map').disabled=inside;
+        $('map').setAttribute('aria-pressed','false');
+        $('map').textContent='Mapa aéreo';
+      },
+      onZone:(label,hint,action)=>{
+        $('zone-label').textContent=label;
+        $('hint').textContent=hint;
+        $('interact').textContent=action;
+        $('touch-action').textContent=action;
+      },
+      onTouchdown:()=>{
+        $('announcement').textContent='TOUCHDOWN';
+        setTimeout(()=>$('announcement').textContent='',1400);
+      },
+    });
+    $('camera-center').onclick=()=>afterMenu(()=>game.centerCamera());
+    $('map').onclick=()=>afterMenu(()=>{
+      const active=game.toggleMap();
+      $('map').setAttribute('aria-pressed',active);
+      $('map').textContent=active?'Volver al campo':'Mapa aéreo';
+    });
+    $('welcome').hidden=true;
+    $('play-hud').hidden=false;
+    $('game-menu').hidden=false;
+    if($('panel').open)game.pause(true);
+    else $('world').focus({preventScroll:true});
+    $('interact').onclick=$('touch-action').onclick=()=>game.action();
+    $('snow').onclick=()=>{
+      const enabled=game.toggleSnow();
+      $('snow').setAttribute('aria-pressed',enabled);
+      $('snow').textContent='Nieve: '+(enabled?'sí':'no');
+    };
+    $('sound').onclick=()=>{
+      const enabled=game.toggleSound();
+      $('sound').setAttribute('aria-pressed',enabled);
+      $('sound').textContent='Sonido: '+(enabled?'sí':'no');
+    };
+  }catch(error){
+    console.error(error);
+    $('loading').textContent='El estadio 3D no está disponible en este navegador. Puedes explorar los proyectos aquí mismo.';
+    button.disabled=false;
+  }
+};
