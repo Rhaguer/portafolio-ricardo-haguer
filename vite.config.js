@@ -8,12 +8,6 @@ export default defineConfig({
   publicDir: 'dist',
   plugins: [{
     name: 'portfolio-static-files',
-    configureServer(server) {
-      server.middlewares.use('/models', (request, response, next) => {
-        request.url = '/public/models' + request.url;
-        next();
-      });
-    },
     closeBundle() {
       for (const file of additionalFiles) copyFileSync(file, `build/${file}`);
       if (existsSync('public/models')) cpSync('public/models', 'build/models', { recursive: true });
